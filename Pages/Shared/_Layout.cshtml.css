@@ -1,0 +1,107 @@
+﻿/* === Tipografía general === */
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #fff8f0;
+    color: #333;
+}
+
+/* === Navbar estilo recetario === */
+.navbar {
+    background-color: #ffcc80; /* tono cálido tipo cocina */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+    color: #6d4c41;
+}
+
+.nav-link {
+    font-weight: 500;
+    color: #4e342e !important;
+}
+
+.navbar-toggler {
+    border-color: #6d4c41;
+}
+
+/* === Logo === */
+.logo {
+    height: 50px;
+    border-radius: 8px;
+}
+
+/* === Cards de recetas === */
+.card {
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease-in-out;
+}
+
+    .card:hover {
+        transform: scale(1.02);
+    }
+
+.card-img-top {
+    height: 200px;
+    object-fit: cover;
+}
+
+.card-title {
+    font-size: 1.2rem;
+    color: #d84315;
+    font-weight: bold;
+}
+
+.card-text {
+    font-size: 0.95rem;
+    color: #5d4037;
+}
+
+.card-footer {
+    background-color: #fff3e0;
+}
+
+/* === Botón personalizado === */
+.btn-outline-primary {
+    border-color: #ff7043;
+    color: #ff7043;
+}
+
+    .btn-outline-primary:hover {
+        background-color: #ff7043;
+        color: white;
+    }
+
+/* === Footer estilo recetario === */
+footer {
+    background-color: #6d4c41;
+    color: #fff8f0;
+    padding: 20px 0;
+    font-size: 0.9rem;
+}
+
+    footer a {
+        color: #ffe0b2;
+        text-decoration: none;
+    }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+/* === Buscador === */
+.input-group input {
+    border-radius: 8px 0 0 8px;
+    border: 1px solid #ff7043;
+}
+
+.input-group .btn {
+    border-radius: 0 8px 8px 0;
+    background-color: #ff7043;
+    color: white;
+    border: none;
+}
