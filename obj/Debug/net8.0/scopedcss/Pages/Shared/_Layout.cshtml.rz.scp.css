@@ -1,0 +1,107 @@
+/* === Tipografía general === */
+body[b-ratdiq4qeu] {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #fff8f0;
+    color: #333;
+}
+
+/* === Navbar estilo recetario === */
+.navbar[b-ratdiq4qeu] {
+    background-color: #ffcc80; /* tono cálido tipo cocina */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar-brand[b-ratdiq4qeu] {
+    font-weight: bold;
+    font-size: 1.5rem;
+    color: #6d4c41;
+}
+
+.nav-link[b-ratdiq4qeu] {
+    font-weight: 500;
+    color: #4e342e !important;
+}
+
+.navbar-toggler[b-ratdiq4qeu] {
+    border-color: #6d4c41;
+}
+
+/* === Logo === */
+.logo[b-ratdiq4qeu] {
+    height: 50px;
+    border-radius: 8px;
+}
+
+/* === Cards de recetas === */
+.card[b-ratdiq4qeu] {
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease-in-out;
+}
+
+    .card:hover[b-ratdiq4qeu] {
+        transform: scale(1.02);
+    }
+
+.card-img-top[b-ratdiq4qeu] {
+    height: 200px;
+    object-fit: cover;
+}
+
+.card-title[b-ratdiq4qeu] {
+    font-size: 1.2rem;
+    color: #d84315;
+    font-weight: bold;
+}
+
+.card-text[b-ratdiq4qeu] {
+    font-size: 0.95rem;
+    color: #5d4037;
+}
+
+.card-footer[b-ratdiq4qeu] {
+    background-color: #fff3e0;
+}
+
+/* === Botón personalizado === */
+.btn-outline-primary[b-ratdiq4qeu] {
+    border-color: #ff7043;
+    color: #ff7043;
+}
+
+    .btn-outline-primary:hover[b-ratdiq4qeu] {
+        background-color: #ff7043;
+        color: white;
+    }
+
+/* === Footer estilo recetario === */
+footer[b-ratdiq4qeu] {
+    background-color: #6d4c41;
+    color: #fff8f0;
+    padding: 20px 0;
+    font-size: 0.9rem;
+}
+
+    footer a[b-ratdiq4qeu] {
+        color: #ffe0b2;
+        text-decoration: none;
+    }
+
+        footer a:hover[b-ratdiq4qeu] {
+            text-decoration: underline;
+        }
+
+/* === Buscador === */
+.input-group input[b-ratdiq4qeu] {
+    border-radius: 8px 0 0 8px;
+    border: 1px solid #ff7043;
+}
+
+.input-group .btn[b-ratdiq4qeu] {
+    border-radius: 0 8px 8px 0;
+    background-color: #ff7043;
+    color: white;
+    border: none;
+}
