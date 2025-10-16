@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CamCook")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fde72473fee4f10561e4c16bb7199274faceb047")]
 [assembly: System.Reflection.AssemblyProductAttribute("CamCook")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CamCook")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
