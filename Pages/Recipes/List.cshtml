@@ -1,26 +1,17 @@
 ﻿@page
 @model CamCook.Pages.Recipes.ListModel
 @{
-    ViewData["Title"] = "Recetario";
+    ViewData["Title"] = "Lista de Recetas";
 }
 
-<h2 class="mb-4 text-center">Recetas destacadas</h2>
+<h2>Lista de Recetas</h2>
 
-<div class="row row-cols-1 row-cols-md-3 g-4">
-    @foreach (var receta in Model.Recetas)
-    {
-        <div class="col">
-            <div class="card receta-card h-100 shadow-sm">
-                <img src="@receta.ImagenUrl" class="card-img-top" alt="@receta.Nombre">
-                <div class="card-body">
-                    <h5 class="card-title text-center fw-bold">@receta.Nombre</h5>
-                    <p class="card-text text-muted text-center">@receta.Descripcion</p>
-                </div>
-                <div class="card-footer bg-white text-center">
-                    <a asp-page="/Recipes/Details" asp-route-id="@receta.Id" class="btn btn-outline-danger">Ver receta</a>
-                </div>
-            </div>
-        </div>
-    }
+<div>
+    <h3>Aquí están todas las recetas:</h3>
+    <ul>
+        @foreach (var recipe in Model.Recetas)
+        {
+            <li>@recipe.Title</li>
+        }
+    </ul>
 </div>
-
