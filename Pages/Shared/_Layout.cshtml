@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿@using System.Security.Claims
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/CamCook.styles.css" asp-append-version="true" />
+    @RenderSection("Styles", required: false)
 </head>
 <body>
     <header>
@@ -16,6 +18,7 @@
                     <img src="~/img/logo.png" alt="CamCook Logo" width="40" height="40" class="me-2" />
                     <span class="fs-4 fw-bold text-dark">CamCook</span>
                 </a>
+
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
                         aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -32,6 +35,29 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark fw-semibold" asp-page="/Privacy">Privacidad</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-page="/Recipes/Create">Nueva receta</a>
+                        </li>
+
+                        @if (User?.Identity?.IsAuthenticated ?? false)
+                        {
+                            <li class="nav-item">
+                                <span class="nav-link text-dark">@User.Identity.Name</span>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-page="/Account/Logout">Salir</a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-page="/Account/Login">Login</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-page="/Account/Register">Registro</a>
+                            </li>
+                        }
+
                     </ul>
                 </div>
             </div>
@@ -39,6 +65,16 @@
     </header>
 
     <div class="container">
+        <!-- Mensajes globales (opcional: útil para mostrar TempData["ok"] del registro) -->
+        @if (TempData["ok"] is string okMsg)
+        {
+            <div class="alert alert-success mt-3" role="alert">@okMsg</div>
+        }
+        @if (TempData["error"] is string errMsg)
+        {
+            <div class="alert alert-danger mt-3" role="alert">@errMsg</div>
+        }
+
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
@@ -59,7 +95,6 @@
             <p class="small mb-0">&copy; 2025 CamCook. Todos los derechos reservados.</p>
         </div>
     </footer>
-
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
