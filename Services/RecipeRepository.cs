@@ -9,7 +9,7 @@ namespace CamCook.Services
         private readonly FirestoreDb _db;
         private readonly IImageStorage _imgStore;
 
-        // ⬇️ cambia "recipes" por "recetas"
+        // cambia "recipes" por "recetas"
         private const string Col = "recetas";
 
         public RecipeRepository(FirestoreDb db, IImageStorage imgStore)

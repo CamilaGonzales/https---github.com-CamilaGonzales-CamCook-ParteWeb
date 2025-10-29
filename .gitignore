@@ -1,11 +1,33 @@
+# Build & IDE
+bin/
+obj/
 .vs/
-**/bin/
-**/obj/
-*.cache
-*.log
-.config/
 *.user
 *.suo
-.vscode/
-!.vscode/settings.json
-!.vscode/extensions.json
+
+# Publicación & perf
+*.pubxml
+*.PublishSettings
+Properties/PublishProfiles/
+
+# Sistema / temporales
+*.log
+*.swp
+*.DS_Store
+Thumbs.db
+
+# Config locales
+appsettings.Development.json
+appsettings.Local.json
+*.local.json
+
+# Credenciales y secretos
+secrets.json
+*.pfx
+GoogleCredentials*.json
+**/google-credentials.json
+**/service-account*.json
+
+# Contenido subido por usuarios (no versionar)
+wwwroot/uploads/
+wwwroot/storage/

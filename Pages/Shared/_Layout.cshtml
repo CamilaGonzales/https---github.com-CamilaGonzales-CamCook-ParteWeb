@@ -39,17 +39,29 @@
                             <a class="nav-link text-dark" asp-page="/Recipes/Create">Nueva receta</a>
                         </li>
 
+                        @* SOLO SE MUESTRA SI EL USUARIO ES ADMIN *@
+                        @if (User.HasClaim("admin", "true"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-danger fw-bold" asp-page="/Admin/Moderacion/Index">
+                                    Moderar recetas
+                                </a>
+                            </li>
+                        }
+
+                        @* USUARIO AUTENTICADO *@
                         @if (User?.Identity?.IsAuthenticated ?? false)
                         {
                             <li class="nav-item">
-                                <span class="nav-link text-dark">@User.Identity.Name</span>
+                                <span class="nav-link text-dark fw-semibold">@User.Identity?.Name</span>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-page="/Account/Logout">Salir</a>
+                                <a class="nav-link text-dark" asp-page="/Account/Logout">Cerrar sesión</a>
                             </li>
                         }
                         else
                         {
+                            @* VISITANTE *@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-page="/Account/Login">Login</a>
                             </li>
@@ -57,7 +69,6 @@
                                 <a class="nav-link text-dark" asp-page="/Account/Register">Registro</a>
                             </li>
                         }
-
                     </ul>
                 </div>
             </div>

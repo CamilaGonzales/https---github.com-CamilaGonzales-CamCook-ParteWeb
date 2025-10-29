@@ -1,0 +1,57 @@
+﻿@page
+@model CamCook.Pages.Admin.Moderacion.IndexModel
+@{
+    ViewData["Title"] = "Moderación de Recetas";
+}
+
+<h2 class="mb-3">Moderación de Recetas (Pendientes)</h2>
+
+@if (!string.IsNullOrEmpty(Model.Msg))
+{
+    <div class="alert alert-success">@Model.Msg</div>
+}
+@if (!string.IsNullOrEmpty(Model.Err))
+{
+    <div class="alert alert-danger">@Model.Err</div>
+}
+
+@if (Model.Pendientes.Count == 0)
+{
+    <p>No hay recetas pendientes.</p>
+}
+else
+{
+    foreach (var r in Model.Pendientes)
+    {
+        var data = r.Data;
+
+        string titulo = data.TryGetValue("titulo", out var t) ? t?.ToString() ?? "(Sin título)" : "(Sin título)";
+        string descripcion = data.TryGetValue("descripcion", out var d) ? d?.ToString() ?? "" : "";
+        string autorUid = data.TryGetValue("autorUid", out var a) ? a?.ToString() ?? "" : "";
+        string estado = data.TryGetValue("estado", out var st) ? st?.ToString() ?? "" : "";
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">@titulo</h5>
+                <p class="card-text" style="white-space:pre-wrap">@descripcion</p>
+                <small class="text-muted">Autor: @autorUid | Estado: @estado</small>
+
+                <div class="mt-3 d-flex gap-2">
+                    <form method="post" asp-page-handler="Approve" asp-antiforgery="true">
+                        <input type="hidden" name="id" value="@r.Id" />
+                        <input type="hidden" name="autorUid" value="@autorUid" />
+                        <button class="btn btn-success btn-sm">Aprobar</button>
+                    </form>
+
+                    <form method="post" asp-page-handler="Reject" asp-antiforgery="true">
+                        <input type="hidden" name="id" value="@r.Id" />
+                        <div class="input-group input-group-sm">
+                            <input name="motivo" class="form-control" placeholder="Motivo de rechazo" />
+                            <button class="btn btn-danger">Rechazar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+}
