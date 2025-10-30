@@ -1,17 +1,46 @@
 ﻿@page
 @model CamCook.Pages.Recipes.ListModel
 @{
-    ViewData["Title"] = "Lista de Recetas";
+    ViewData["Title"] = "Recetas publicadas";
 }
 
-<h2>Lista de Recetas</h2>
+<h2>Recetas publicadas</h2>
 
-<div>
-    <h3>Aquí están todas las recetas:</h3>
-    <ul>
-        @foreach (var recipe in Model.Recetas)
+@if (Model.Recetas.Count == 0)
+{
+    <p>No hay recetas publicadas todavía.</p>
+}
+else
+{
+    <ul class="list-group">
+        @foreach (var r in Model.Recetas)
         {
-            <li>@recipe.Title</li>
+            var titulo = r.TryGetValue("titulo", out var t) ? t?.ToString() ?? "" : "";
+            var tiempo = r.TryGetValue("tiempoPrep", out var tp) ? tp?.ToString() ?? "" : "";
+
+            // imagenUrl en raíz
+            string? imagen = r.TryGetValue("imagenUrl", out var img) ? img?.ToString() : null;
+
+            // fallback: ai.imagenUrl
+            if (string.IsNullOrWhiteSpace(imagen) && r.TryGetValue("ai", out var aiObj) && aiObj is Dictionary<string, object> ai)
+            {
+                if (ai.TryGetValue("imagenUrl", out var img2)) imagen = img2?.ToString();
+            }
+
+            <li class="list-group-item d-flex align-items-center">
+                @if (!string.IsNullOrWhiteSpace(imagen))
+                {
+                    <img src="@imagen" alt="@titulo"
+                         class="me-3" style="width:64px;height:64px;object-fit:cover;border-radius:8px;" />
+                }
+                <div>
+                    <div class="fw-semibold">@titulo</div>
+                    @if (!string.IsNullOrWhiteSpace(tiempo))
+                    {
+                        <small class="text-muted">Tiempo: @tiempo</small>
+                    }
+                </div>
+            </li>
         }
     </ul>
-</div>
+}

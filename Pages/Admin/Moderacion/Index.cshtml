@@ -4,7 +4,7 @@
     ViewData["Title"] = "Moderación de Recetas";
 }
 
-<h2 class="mb-3">Moderación de Recetas (Pendientes)</h2>
+<h2 class="mb-3">Moderación de Recetas (Pendientes y Rechazadas por IA)</h2>
 
 @if (!string.IsNullOrEmpty(Model.Msg))
 {
@@ -17,33 +17,89 @@
 
 @if (Model.Pendientes.Count == 0)
 {
-    <p>No hay recetas pendientes.</p>
+    <p>No hay recetas para moderar.</p>
 }
 else
 {
     foreach (var r in Model.Pendientes)
     {
         var data = r.Data;
-
         string titulo = data.TryGetValue("titulo", out var t) ? t?.ToString() ?? "(Sin título)" : "(Sin título)";
         string descripcion = data.TryGetValue("descripcion", out var d) ? d?.ToString() ?? "" : "";
         string autorUid = data.TryGetValue("autorUid", out var a) ? a?.ToString() ?? "" : "";
         string estado = data.TryGetValue("estado", out var st) ? st?.ToString() ?? "" : "";
 
+        // --- ROLES DEL AUTOR (barrita y badges) ---
+        var roles = Model.RolesPorAutor.TryGetValue(autorUid ?? "", out var rr) ? rr : new List<string>();
+        var rolesTexto = roles.Count > 0 ? string.Join(" - ", roles) : "usuario";
+
+        // --- MOTIVOS DE RECHAZO (IA / ADMIN) ---
+        string verdict = "";
+        string motivoIA = "";
+        if (data.TryGetValue("ai", out var aiObj) && aiObj is Dictionary<string, object> aiDict)
+        {
+            if (aiDict.TryGetValue("flags", out var flagsObj) && flagsObj is Dictionary<string, object> flagsDict)
+            {
+                verdict = flagsDict.TryGetValue("verdict", out var v) ? v?.ToString() ?? "" : "";
+                // motivo de IA
+                motivoIA = flagsDict.TryGetValue("reason", out var rz) ? rz?.ToString() ?? "" : "";
+                // motivo guardado por el admin dentro de ai.flags (si lo usaste así)
+                if (string.IsNullOrWhiteSpace(motivoIA))
+                    motivoIA = flagsDict.TryGetValue("reasonAdmin", out var rza) ? rza?.ToString() ?? "" : motivoIA;
+            }
+        }
+        // motivo plano (compatibilidad)
+        string motivoPlano = data.TryGetValue("motivoRechazo", out var mr) ? mr?.ToString() ?? "" : "";
+        string motivoMostrar = !string.IsNullOrWhiteSpace(motivoPlano) ? motivoPlano : motivoIA;
+
         <div class="card mb-3">
             <div class="card-body">
                 <h5 class="card-title">@titulo</h5>
                 <p class="card-text" style="white-space:pre-wrap">@descripcion</p>
-                <small class="text-muted">Autor: @autorUid | Estado: @estado</small>
+
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <small class="text-muted">Autor: @autorUid</small>
+                    <span class="text-muted">|</span>
+                    <small class="text-muted">Estado: @estado</small>
+                    <span class="text-muted">|</span>
+
+                    @* “Barrita” de roles (texto) *@
+                    <small class="text-muted">Roles: @rolesTexto</small>
+
+                    @* Badges visuales *@
+                    <div>
+                        @foreach (var role in roles)
+                        {
+                            var cls = role.Equals("chef", StringComparison.OrdinalIgnoreCase) ? "bg-success"
+                            : role.Equals("admin", StringComparison.OrdinalIgnoreCase) ? "bg-primary"
+                            : "bg-secondary";
+                            <span class="badge @cls">@role</span>
+                        }
+                    </div>
+                </div>
+
+                @* --- BLOQUE NUEVO: mostrar motivo de rechazo --- *@
+                @if (!string.IsNullOrWhiteSpace(motivoMostrar) && !string.Equals(estado, "publicada", StringComparison.OrdinalIgnoreCase))
+                {
+                    <div class="alert alert-warning mt-2 mb-0 p-2">
+                        <strong>@(estado == "rechazada_ai" ? "Motivo (IA):" : "Motivo de rechazo:")</strong>
+                        <div class="mt-1" style="white-space:pre-wrap">@motivoMostrar</div>
+                        @if (!string.IsNullOrWhiteSpace(verdict))
+                        {
+                            <small class="text-muted d-block mt-1">Veredicto IA: @verdict</small>
+                        }
+                    </div>
+                }
+                @* ------------------------------------------------ *@
 
                 <div class="mt-3 d-flex gap-2">
-                    <form method="post" asp-page-handler="Approve" asp-antiforgery="true">
+                    <form method="post" asp-page-handler="Aprobar" asp-antiforgery="true">
                         <input type="hidden" name="id" value="@r.Id" />
                         <input type="hidden" name="autorUid" value="@autorUid" />
                         <button class="btn btn-success btn-sm">Aprobar</button>
                     </form>
 
-                    <form method="post" asp-page-handler="Reject" asp-antiforgery="true">
+                    <form method="post" asp-page-handler="Rechazar" asp-antiforgery="true">
                         <input type="hidden" name="id" value="@r.Id" />
                         <div class="input-group input-group-sm">
                             <input name="motivo" class="form-control" placeholder="Motivo de rechazo" />

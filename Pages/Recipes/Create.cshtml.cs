@@ -2,6 +2,7 @@ using CamCook.Models;
 using CamCook.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Security.Claims;
 
 namespace CamCook.Pages.Recipes
 {
@@ -17,20 +18,45 @@ namespace CamCook.Pages.Recipes
         [BindProperty]
         public RecipeInput Input { get; set; } = new();
 
-        public void OnGet()
+        public IActionResult OnGet()
         {
-            if (Input.Ingredients.Count == 0) Input.Ingredients.Add(new IngredientInput());
-            if (Input.Steps.Count == 0) Input.Steps.Add(new StepInput());
+            if (!(User?.Identity?.IsAuthenticated ?? false))
+                return RedirectToPage("/Account/Login");
+
+            return Page();
         }
 
-        public async Task<IActionResult> OnPostAsync()
+        public async Task<IActionResult> OnPostAsync(CancellationToken ct)
         {
-            if (!ModelState.IsValid)
-                return Page();
+            if (!(User?.Identity?.IsAuthenticated ?? false))
+                return RedirectToPage("/Account/Login");
 
-            var id = await _repo.CreateAsync(Input);
-            // TODO: crea una página Details y redirige ahí si quieres
-            return RedirectToPage("/Index");
+            if (!ModelState.IsValid) return Page();
+
+            // Tomamos UID y Email del usuario autenticado
+            var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                     ?? User.FindFirstValue("uid")
+                     ?? string.Empty;
+
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(uid))
+            {
+                ModelState.AddModelError(string.Empty, "No se pudo determinar el UID del usuario autenticado.");
+                return Page();
+            }
+
+            // Inyectamos autor en el modelo antes de crear
+            Input.AuthorUid = uid;
+            Input.AuthorEmail = string.IsNullOrWhiteSpace(email) ? null : email;
+
+            // Crear receta (el repo hará IA, pondrá estado y publicada=false)
+            var id = await _repo.CreateAsync(Input, ct);
+
+            //Mensaje visible en el layout
+            TempData["ok"] = "Receta enviada a revisión. Te avisaremos cuando se publique.";
+
+            return RedirectToPage("/Recipes/List");
         }
     }
 }

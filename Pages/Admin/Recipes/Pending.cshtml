@@ -1,4 +1,39 @@
 ﻿@page
 @model CamCook.Pages.Admin.Recipes.PendingModel
-@{
+<h2>Recetas pendientes</h2>
+
+@foreach (var r in Model.Pendientes)
+{
+    var data = r.Data;
+    var titulo = data.ContainsKey("titulo") ? data["titulo"] : "(sin título)";
+    var ai = data.ContainsKey("ai") ? (Dictionary<string, object>)data["ai"] : null;
+    var flags = ai?["flags"] as IEnumerable<object> ?? Array.Empty<object>();
+    var autorUid = data.ContainsKey("autorUid") ? data["autorUid"]?.ToString() : "";
+
+    <div class="card p-3 mb-3">
+        <h4>@titulo</h4>
+        <div>Estado: @data["estado"]</div>
+        @if (ai != null)
+        {
+            <div>AI: score @(ai["score"]) – verdict @(ai["verdict"])</div>
+            <ul>
+                @foreach (var f in flags)
+                {
+                    <li>@f</li>
+                }
+            </ul>
+        }
+
+        <form method="post" asp-page-handler="Aprobar">
+            <input type="hidden" name="id" value="@r.Id" />
+            <input type="hidden" name="autorUid" value="@autorUid" />
+            <button class="btn btn-success">Aprobar</button>
+        </form>
+
+        <form method="post" asp-page-handler="Rechazar" class="mt-2">
+            <input type="hidden" name="id" value="@r.Id" />
+            <input class="form-control mb-1" name="motivo" placeholder="Motivo del rechazo" />
+            <button class="btn btn-danger">Rechazar</button>
+        </form>
+    </div>
 }

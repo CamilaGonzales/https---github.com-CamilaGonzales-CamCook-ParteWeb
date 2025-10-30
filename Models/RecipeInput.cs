@@ -16,6 +16,9 @@ public class RecipeInput
     // Listas dinámicas
     public List<IngredientInput> Ingredients { get; set; } = new();
     public List<StepInput> Steps { get; set; } = new();
+
+    public string? AuthorUid { get; set; }
+    public string? AuthorEmail { get; set; }
 }
 
 public class IngredientInput

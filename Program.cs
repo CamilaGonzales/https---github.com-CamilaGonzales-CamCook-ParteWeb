@@ -53,8 +53,11 @@ builder.Services.AddSingleton<IImageStorage, LocalImageStorage>();
 
 // === Servicios de tu app ===
 builder.Services.AddScoped<IRecipeRepository, RecipeRepository>();
+builder.Services.AddScoped<RecetaService>();
+builder.Services.AddSingleton<UsuarioService>();
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<IImageStorage, ImgbbImageStorage>();
 builder.Services.AddRazorPages();
-
 // --- Cookies auth ---
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>

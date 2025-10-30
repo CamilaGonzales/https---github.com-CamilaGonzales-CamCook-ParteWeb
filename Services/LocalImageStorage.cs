@@ -14,24 +14,35 @@ namespace CamCook.Services
             _http = http;
         }
 
-        public async Task<string?> SaveAsync(IFormFile? file, CancellationToken ct = default)
+        public async Task<string> SaveAsync(IFormFile file, CancellationToken ct = default)
         {
-            if (file == null || file.Length == 0) return null;
+            if (file == null || file.Length == 0) throw new ArgumentException("Archivo vacío");
 
-            var uploadsPath = Path.Combine(_env.WebRootPath, "uploads");
-            Directory.CreateDirectory(uploadsPath);
+            var uploads = Path.Combine(_env.WebRootPath, "uploads");
+            Directory.CreateDirectory(uploads);
 
-            var ext = Path.GetExtension(file.FileName);
-            var name = $"{Guid.NewGuid():N}{ext}";
-            var fullPath = Path.Combine(uploadsPath, name);
+            var fileName = $"{Guid.NewGuid():N}{Path.GetExtension(file.FileName)}";
+            var fullPath = Path.Combine(uploads, fileName);
+            using (var fs = new FileStream(fullPath, FileMode.Create))
+                await file.CopyToAsync(fs, ct);
 
-            using var fs = new FileStream(fullPath, FileMode.Create);
-            await file.CopyToAsync(fs, ct);
+            var req = _http.HttpContext!.Request;
+            var baseUrl = $"{req.Scheme}://{req.Host}";
+            return $"{baseUrl}/uploads/{fileName}";
+        }
 
-            // URL pública en desarrollo
-            var req = _http.HttpContext!;
-            var baseUrl = $"{req.Request.Scheme}://{req.Request.Host}";
-            return $"{baseUrl}/uploads/{name}";
+        public async Task<string> SaveAsync(byte[] bytes, string contentType = "image/jpeg", string? name = null, CancellationToken ct = default)
+        {
+            var uploads = Path.Combine(_env.WebRootPath, "uploads");
+            Directory.CreateDirectory(uploads);
+
+            var fileName = $"{(string.IsNullOrWhiteSpace(name) ? Guid.NewGuid().ToString("N") : name)}.jpg";
+            var fullPath = Path.Combine(uploads, fileName);
+            await File.WriteAllBytesAsync(fullPath, bytes, ct);
+
+            var req = _http.HttpContext!.Request;
+            var baseUrl = $"{req.Scheme}://{req.Host}";
+            return $"{baseUrl}/uploads/{fileName}";
         }
     }
 }

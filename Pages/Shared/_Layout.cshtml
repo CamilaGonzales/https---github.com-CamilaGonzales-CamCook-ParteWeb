@@ -1,4 +1,25 @@
 ﻿@using System.Security.Claims
+@inject Google.Cloud.Firestore.FirestoreDb Db
+@{
+    var isAdmin = false;
+
+    if (User?.Identity?.IsAuthenticated ?? false)
+    {
+        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("uid");
+
+        if (!string.IsNullOrWhiteSpace(uid))
+        {
+            var snap = await Db.Collection("usuarios").Document(uid).GetSnapshotAsync();
+            if (snap.Exists)
+            {
+                var d = snap.ToDictionary();
+                isAdmin =
+                    (d.TryGetValue("rol", out var r) && string.Equals(r?.ToString(), "admin", StringComparison.OrdinalIgnoreCase))
+                    || (d.TryGetValue("esAdmin", out var ea) && ea is bool b && b);
+            }
+        }
+    }
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -39,8 +60,8 @@
                             <a class="nav-link text-dark" asp-page="/Recipes/Create">Nueva receta</a>
                         </li>
 
-                        @* SOLO SE MUESTRA SI EL USUARIO ES ADMIN *@
-                        @if (User.HasClaim("admin", "true"))
+                        @* SOLO SE MUESTRA SI EL USUARIO ES ADMIN (consultado en Firestore) *@
+                        @if (isAdmin)
                         {
                             <li class="nav-item">
                                 <a class="nav-link text-danger fw-bold" asp-page="/Admin/Moderacion/Index">
@@ -76,7 +97,6 @@
     </header>
 
     <div class="container">
-        <!-- Mensajes globales (opcional: útil para mostrar TempData["ok"] del registro) -->
         @if (TempData["ok"] is string okMsg)
         {
             <div class="alert alert-success mt-3" role="alert">@okMsg</div>
