@@ -1,46 +1,91 @@
 ﻿@page
 @model CamCook.Pages.Recipes.ListModel
+@using System.Security.Claims
+@functions {
+    string? CurrentUid() =>
+        User?.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? User?.FindFirstValue("uid");
+}
 @{
     ViewData["Title"] = "Recetas publicadas";
+    var currentUserUid = CurrentUid() ?? "";
 }
 
-<h2>Recetas publicadas</h2>
+<h2 class="mb-3">Recetas publicadas</h2>
 
-@if (Model.Recetas.Count == 0)
+@if (User?.Identity?.IsAuthenticated ?? false)
+{
+    <a class="btn btn-primary mb-3" asp-page="/Recipes/Create">+ Nueva receta</a>
+}
+
+@if (Model.Recetas == null || Model.Recetas.Count == 0)
 {
     <p>No hay recetas publicadas todavía.</p>
 }
 else
 {
-    <ul class="list-group">
+    <div class="list-group">
         @foreach (var r in Model.Recetas)
         {
-            var titulo = r.TryGetValue("titulo", out var t) ? t?.ToString() ?? "" : "";
-            var tiempo = r.TryGetValue("tiempoPrep", out var tp) ? tp?.ToString() ?? "" : "";
+            string id = r.TryGetValue("id", out var idObj) ? idObj?.ToString() ?? "" : "";
 
-            // imagenUrl en raíz
-            string? imagen = r.TryGetValue("imagenUrl", out var img) ? img?.ToString() : null;
+            string titulo =
+                (r.TryGetValue("titulo", out var t1) ? t1?.ToString() : null)
+                ?? (r.TryGetValue("title", out var t2) ? t2?.ToString() : null)
+                ?? "";
 
-            // fallback: ai.imagenUrl
-            if (string.IsNullOrWhiteSpace(imagen) && r.TryGetValue("ai", out var aiObj) && aiObj is Dictionary<string, object> ai)
-            {
-                if (ai.TryGetValue("imagenUrl", out var img2)) imagen = img2?.ToString();
-            }
+            string tiempo =
+                (r.TryGetValue("tiempoPrep", out var tp1) ? tp1?.ToString() : null)
+                ?? (r.TryGetValue("prepTimeText", out var tp2) ? tp2?.ToString() : null)
+                ?? "";
 
-            <li class="list-group-item d-flex align-items-center">
-                @if (!string.IsNullOrWhiteSpace(imagen))
-                {
-                    <img src="@imagen" alt="@titulo"
-                         class="me-3" style="width:64px;height:64px;object-fit:cover;border-radius:8px;" />
-                }
-                <div>
-                    <div class="fw-semibold">@titulo</div>
-                    @if (!string.IsNullOrWhiteSpace(tiempo))
+            string? img =
+                (r.TryGetValue("imagenUrl", out var im1) ? im1?.ToString() : null)
+                ?? (r.TryGetValue("mainImageUrl", out var im2) ? im2?.ToString() : null);
+
+            string authorUid = r.TryGetValue("authorUid", out var au) ? au?.ToString() ?? "" : "";
+            bool isOwner = !string.IsNullOrWhiteSpace(authorUid) && authorUid == currentUserUid;
+
+            <div class="list-group-item">
+                <div class="d-flex">
+                    @if (!string.IsNullOrWhiteSpace(img))
                     {
-                        <small class="text-muted">Tiempo: @tiempo</small>
+                        <img src="@img" alt="@titulo"
+                             class="me-3 flex-shrink-0"
+                             style="width:120px;height:120px;object-fit:cover;border-radius:10px;" />
                     }
+
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1">@titulo</h5>
+
+                        @if (!string.IsNullOrWhiteSpace(tiempo))
+                        {
+                            <div class="text-muted mb-2">⏱️ Tiempo: @tiempo</div>
+                        }
+
+                        <a class="btn btn-sm btn-success"
+                           asp-page="/Recipes/Details" asp-route-id="@id">
+                            Ver receta →
+                        </a>
+
+                        @if (isOwner)
+                        {
+                            <a class="btn btn-sm btn-primary ms-2"
+                               asp-page="/Recipes/Update" asp-route-id="@id">
+                                Editar
+                            </a>
+
+                            <form method="post"
+                                  asp-page="/Recipes/Delete"
+                                  asp-route-id="@id"
+                                  class="d-inline ms-2"
+                                  onsubmit="return confirm('¿Eliminar la receta definitivamente?');">
+                                <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+                            </form>
+                        }
+                    </div>
                 </div>
-            </li>
+            </div>
         }
-    </ul>
+    </div>
 }

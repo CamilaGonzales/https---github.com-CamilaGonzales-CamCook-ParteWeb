@@ -3,6 +3,8 @@ using CamCook.Services;
 using Google.Apis.Auth.OAuth2;
 using Google.Cloud.Firestore;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http.Features;
+using System.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 // === Config & Credenciales desde appsettings ===
 // - Google:ProjectId            -> string (obligatorio)
 // - Google:ServiceAccount:*     -> objeto con el JSON del service account (obligatorio)
+// - Imgbb:ApiKey                -> string (obligatorio para subir a ImgBB)
 //
 
 // 1) ProjectId
@@ -47,17 +50,25 @@ var firestore = new FirestoreDbBuilder
 }.Build();
 builder.Services.AddSingleton(firestore);
 
-// === Almacenamiento de imágenes LOCAL (gratis) ===
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddSingleton<IImageStorage, LocalImageStorage>();
+builder.Services.AddHttpClient("imgbb", c =>
+{
+    c.BaseAddress = new Uri("https://api.imgbb.com/");
+});
+builder.Services.AddSingleton<IImageStorage, ImgbbImageStorage>();
+
+// (Opcional) permitir archivos grandes en formularios
+builder.Services.Configure<FormOptions>(o =>
+{
+    o.MultipartBodyLengthLimit = 20 * 1024 * 1024; // 20 MB
+});
 
 // === Servicios de tu app ===
 builder.Services.AddScoped<IRecipeRepository, RecipeRepository>();
 builder.Services.AddScoped<RecetaService>();
 builder.Services.AddSingleton<UsuarioService>();
-builder.Services.AddHttpClient();
-builder.Services.AddSingleton<IImageStorage, ImgbbImageStorage>();
+
 builder.Services.AddRazorPages();
+
 // --- Cookies auth ---
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
@@ -85,7 +96,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles(); // necesario para servir /uploads
+app.UseStaticFiles(); // (sigue sirviendo /wwwroot si lo usas)
 app.UseRouting();
 
 app.UseAuthentication();

@@ -4,40 +4,48 @@
     ViewData["Title"] = "Registro";
 }
 
-<h2>Registro</h2>
+<h2 class="mb-3">Registro</h2>
 
-<form method="post">
+<form method="post" class="card p-3 shadow-sm">
     @Html.AntiForgeryToken()
+
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
     <div class="mb-3">
         <label asp-for="Input.Username" class="form-label">Nombre de usuario</label>
-        <input asp-for="Input.Username" class="form-control" />
+        <input asp-for="Input.Username" class="form-control" placeholder="Ej. juan123" />
         <span asp-validation-for="Input.Username" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
         <label asp-for="Input.Email" class="form-label">Correo electrónico</label>
-        <input asp-for="Input.Email" class="form-control" type="email" />
+        <input asp-for="Input.Email" class="form-control" type="email" placeholder="Ej. correo@gmail.com" />
         <span asp-validation-for="Input.Email" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
         <label asp-for="Input.Password" class="form-label">Contraseña</label>
-        <input asp-for="Input.Password"
-               class="form-control"
-               type="password"
-               minlength="8" maxlength="64"
-               pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9])\S{8,64}$"
-               title="8–64 caracteres, incluir mayúscula, minúscula, número y símbolo, sin espacios." />
-        <div class="form-text">
-            Debe incluir mayúsculas, minúsculas, números y símbolos. Sin espacios.
+        <div class="input-group">
+            <input asp-for="Input.Password"
+                   id="passwordInput"
+                   class="form-control"
+                   type="password"
+                   minlength="8"
+                   maxlength="64"
+                   placeholder="Debe tener mayúscula, minúscula y número" />
+            <button type="button" class="btn btn-outline-secondary" id="togglePassword" tabindex="-1">
+                👁️
+            </button>
+        </div>
+        <div id="passwordFeedback" class="form-text text-muted">
+            Mínimo 8 caracteres, debe incluir mayúsculas, minúsculas y números.
         </div>
         <span asp-validation-for="Input.Password" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
         <label asp-for="Input.ConfirmPassword" class="form-label">Confirmar contraseña</label>
-        <input asp-for="Input.ConfirmPassword" class="form-control" type="password" />
+        <input asp-for="Input.ConfirmPassword" class="form-control" type="password" placeholder="Repite la contraseña" />
         <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
     </div>
 
@@ -48,4 +56,40 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        const toggle = document.getElementById('togglePassword');
+        const input = document.getElementById('passwordInput');
+        const feedback = document.getElementById('passwordFeedback');
+
+        // Mostrar / ocultar contraseña
+        toggle.addEventListener('click', () => {
+            const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+            input.setAttribute('type', type);
+            toggle.textContent = type === 'password' ? '👁️' : '🙈';
+        });
+
+        // Validación visual dinámica
+        input.addEventListener('input', () => {
+            const value = input.value;
+            const hasUpper = /[A-Z]/.test(value);
+            const hasLower = /[a-z]/.test(value);
+            const hasNumber = /\d/.test(value);
+            const longEnough = value.length >= 8;
+
+            if (hasUpper && hasLower && hasNumber && longEnough) {
+                feedback.textContent = "✅ Contraseña segura";
+                feedback.classList.remove("text-muted", "text-danger");
+                feedback.classList.add("text-success");
+            } else if (value.length > 0) {
+                feedback.textContent = "⚠️ Debe tener 8 caracteres, mayúscula, minúscula y número.";
+                feedback.classList.remove("text-muted", "text-success");
+                feedback.classList.add("text-danger");
+            } else {
+                feedback.textContent = "Mínimo 8 caracteres, debe incluir mayúsculas, minúsculas y números.";
+                feedback.classList.remove("text-success", "text-danger");
+                feedback.classList.add("text-muted");
+            }
+        });
+    </script>
 }

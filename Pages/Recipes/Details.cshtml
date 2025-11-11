@@ -1,0 +1,125 @@
+﻿@page "{id}"
+@model CamCook.Pages.Recipes.DetailsModel
+@{
+    ViewData["Title"] = Model.Title ?? "Receta";
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="alert alert-danger">@Model.Error</div>
+}
+else if (Model.Doc == null)
+{
+    <div class="alert alert-warning">No se encontró la receta solicitada.</div>
+}
+else
+{
+    <div class="container py-3">
+
+        <div class="d-flex align-items-start gap-3 mb-3">
+            @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
+            {
+                <img src="@Model.ImageUrl"
+                     alt="@Model.Title"
+                     class="rounded"
+                     style="width:280px;height:280px;object-fit:cover;" />
+            }
+
+            <div class="flex-grow-1">
+                <h2 class="mb-2">@Model.Title</h2>
+
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                    @if (!string.IsNullOrWhiteSpace(Model.PrepTimeText))
+                    {
+                        <span class="badge bg-secondary">⏱️ @Model.PrepTimeText</span>
+                    }
+                    @if (Model.Calories.HasValue)
+                    {
+                        <span class="badge bg-info text-dark">🔥 @Model.Calories kcal</span>
+                    }
+                    @if (Model.Servings.HasValue)
+                    {
+                        <span class="badge bg-success">🍽️ @Model.Servings porciones</span>
+                    }
+                </div>
+
+                <div class="text-muted small">
+                    @if (!string.IsNullOrWhiteSpace(Model.Estado))
+                    {
+                        <span class="me-2">Estado: <strong>@Model.Estado</strong></span>
+                    }
+                    @if (Model.PublicadoEn != null)
+                    {
+                        <span class="me-2">Publicado: @Model.PublicadoEn?.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.AuthorEmail))
+                    {
+                        <span class="me-2">Autor: @Model.AuthorEmail</span>
+                    }
+                </div>
+
+                <div class="mt-3">
+                    <a class="btn btn-outline-primary" asp-page="/Recipes/List">← Volver a la lista</a>
+                </div>
+            </div>
+        </div>
+
+        <hr />
+
+        <div class="row">
+            <div class="col-md-5">
+                <h4>Ingredientes</h4>
+                @if (Model.Ingredients.Count == 0)
+                {
+                    <div class="text-muted">Sin ingredientes cargados.</div>
+                }
+                else
+                {
+                    <ul class="list-group">
+                        @foreach (var ing in Model.Ingredients)
+                        {
+                            <li class="list-group-item">
+                                <div class="fw-semibold">@ing.Name</div>
+                                <div class="text-muted small">
+                                    @if (!string.IsNullOrWhiteSpace(ing.Quantity))
+                                    {
+                                        <span>@ing.Quantity</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(ing.Unit))
+                                    {
+                                        <span> @ing.Unit</span>
+                                    }
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+
+            <div class="col-md-7">
+                <h4>Pasos</h4>
+                @if (Model.Steps.Count == 0)
+                {
+                    <div class="text-muted">Sin pasos cargados.</div>
+                }
+                else
+                {
+                    <ol class="list-group list-group-numbered">
+                        @foreach (var st in Model.Steps)
+                        {
+                            <li class="list-group-item">
+                                <div class="mb-2">@st.Description</div>
+                                @if (!string.IsNullOrWhiteSpace(st.ImageUrl))
+                                {
+                                    <img src="@st.ImageUrl" alt="Paso @st.Order"
+                                         class="rounded"
+                                         style="max-width:100%;height:auto;" />
+                                }
+                            </li>
+                        }
+                    </ol>
+                }
+            </div>
+        </div>
+    </div>
+}

@@ -1,0 +1,23 @@
+﻿@page "{id}"
+@model CamCook.Pages.Recipes.DeleteModel
+@using System.Security.Claims
+@{
+    ViewData["Title"] = "Eliminar Receta";
+
+    var currentUserUid = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                         ?? User.FindFirstValue("uid");
+}
+
+<h2>Eliminar Receta</h2>
+
+<p>¿Estás seguro que quieres eliminar la receta: <strong>@Model.Title</strong>?</p>
+
+<form method="post"
+      asp-route-id="@Model.Id"
+      class="d-inline ms-2"
+      onsubmit="return confirm('¿Estás seguro de eliminar tu creación? Esta acción no se puede deshacer.');">
+
+    <input type="hidden" asp-for="Id" /> <!-- garantiza que el Id viaje en el POST -->
+    <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+    <a asp-page="/Recipes/List" class="btn btn-sm btn-secondary ms-2">Cancelar</a>
+</form>

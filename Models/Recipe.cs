@@ -16,6 +16,10 @@ namespace CamCook.Models
 
         [FirestoreProperty("ingredientes")] public List<Ingredient> Ingredients { get; set; } = new();
         [FirestoreProperty("pasos")] public List<CookStep> Steps { get; set; } = new();
+
+        // <-- nuevas propiedades
+        [FirestoreProperty("authorUid")] public string AuthorUid { get; set; } = "";
+        [FirestoreProperty("authorEmail")] public string AuthorEmail { get; set; } = "";
     }
 
     [FirestoreData]

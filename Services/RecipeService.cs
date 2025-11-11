@@ -151,4 +151,24 @@ public class RecetaService
 
         return list;
     }
+
+    /// <summary>
+    /// Lee el documento 'recetas/{id}' y lo entrega como diccionario flexible.
+    /// Retorna null si no existe.
+    /// </summary>
+    public async Task<IDictionary<string, object>?> ObtenerPorIdAsync(string id, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return null;
+
+        var docRef = _db.Collection("recetas").Document(id);
+
+        // Importante: pasar el CancellationToken del request
+        var snap = await docRef.GetSnapshotAsync(ct);
+
+        if (!snap.Exists) return null;
+
+        // Convierte el documento completo a Dictionary<string, object>
+        // Las listas y objetos anidados se devuelven como List<object> y Dictionary<string, object>
+        return snap.ToDictionary();
+    }
 }

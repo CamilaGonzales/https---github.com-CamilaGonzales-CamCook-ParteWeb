@@ -9,10 +9,12 @@ namespace CamCook.Pages.Recipes
     public class CreateModel : PageModel
     {
         private readonly IRecipeRepository _repo;
+        private readonly ILogger<CreateModel> _log;
 
-        public CreateModel(IRecipeRepository repo)
+        public CreateModel(IRecipeRepository repo, ILogger<CreateModel> log)
         {
             _repo = repo;
+            _log = log;
         }
 
         [BindProperty]
@@ -26,37 +28,53 @@ namespace CamCook.Pages.Recipes
             return Page();
         }
 
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> OnPostAsync(CancellationToken ct)
         {
             if (!(User?.Identity?.IsAuthenticated ?? false))
                 return RedirectToPage("/Account/Login");
 
-            if (!ModelState.IsValid) return Page();
+            if (!ModelState.IsValid)
+                return Page();
 
-            // Tomamos UID y Email del usuario autenticado
-            var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                     ?? User.FindFirstValue("uid")
-                     ?? string.Empty;
-
-            var email = User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
-
-            if (string.IsNullOrWhiteSpace(uid))
+            try
             {
-                ModelState.AddModelError(string.Empty, "No se pudo determinar el UID del usuario autenticado.");
+                var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                          ?? User.FindFirstValue("uid")
+                          ?? string.Empty;
+
+                var email = User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
+                var nombre = User.FindFirstValue(ClaimTypes.Name)
+                             ?? User.FindFirstValue("nombre")
+                             ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(uid))
+                {
+                    ModelState.AddModelError(string.Empty, "No se pudo determinar el UID del usuario autenticado.");
+                    return Page();
+                }
+
+                // Inyectamos datos del autor
+                Input.AuthorUid = uid;
+                Input.AuthorEmail = string.IsNullOrWhiteSpace(email) ? null : email;
+                Input.AuthorName = string.IsNullOrWhiteSpace(nombre) ? null : nombre;
+
+                var id = await _repo.CreateAsync(Input, ct);
+
+                TempData["ok"] = "Receta enviada a revisión. Te avisaremos cuando se publique.";
+                return RedirectToPage("/Recipes/List");
+            }
+            catch (OperationCanceledException)
+            {
+                return new StatusCodeResult(StatusCodes.Status499ClientClosedRequest);
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "Error creando receta");
+                ModelState.AddModelError(string.Empty, "Ocurrió un error al crear la receta. Intenta nuevamente.");
                 return Page();
             }
-
-            // Inyectamos autor en el modelo antes de crear
-            Input.AuthorUid = uid;
-            Input.AuthorEmail = string.IsNullOrWhiteSpace(email) ? null : email;
-
-            // Crear receta (el repo hará IA, pondrá estado y publicada=false)
-            var id = await _repo.CreateAsync(Input, ct);
-
-            //Mensaje visible en el layout
-            TempData["ok"] = "Receta enviada a revisión. Te avisaremos cuando se publique.";
-
-            return RedirectToPage("/Recipes/List");
         }
+
     }
 }

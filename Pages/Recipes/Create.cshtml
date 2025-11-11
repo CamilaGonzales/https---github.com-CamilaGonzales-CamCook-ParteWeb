@@ -7,6 +7,8 @@
 <h2>Crear Receta</h2>
 
 <form method="post" enctype="multipart/form-data">
+    <div asp-validation-summary="All" class="text-danger mb-2"></div>
+
     <fieldset class="mb-3">
         <label class="form-label">Título</label>
         <input asp-for="Input.Title" class="form-control" />
@@ -46,7 +48,7 @@
     <button type="button" class="btn btn-secondary" onclick="addStep()">+ Agregar paso</button>
 
     <hr />
-    <button type="submit" class="btn btn-primary">Mandr a revisar</button>
+    <button type="submit" class="btn btn-primary">Mandar a revisar</button>
 </form>
 
 @section Scripts {

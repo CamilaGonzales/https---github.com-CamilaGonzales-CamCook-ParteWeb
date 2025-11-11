@@ -1,0 +1,120 @@
+﻿@page "{id}"
+@model CamCook.Pages.Recipes.UpdateModel
+@{
+    ViewData["Title"] = "Editar Receta";
+}
+
+<h2>Editar Receta</h2>
+
+<form method="post" enctype="multipart/form-data">
+    <div class="mb-3">
+        <label class="form-label">Título</label>
+        <input asp-for="Input.Title" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Calorías</label>
+        <input asp-for="Input.Calories" class="form-control" type="number" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Porciones</label>
+        <input asp-for="Input.Servings" class="form-control" type="number" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Tiempo de preparación</label>
+        <input asp-for="Input.PrepTimeText" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Imagen final del plato</label>
+        @* Vista previa si existe *@
+        @if (!string.IsNullOrWhiteSpace(Model.ExistingMainImageUrl))
+        {
+            <div class="mb-2">
+                <img src="@Model.ExistingMainImageUrl" style="max-width:240px;border-radius:8px;" />
+                <div class="text-muted small">Se conservará si no subes una nueva.</div>
+            </div>
+        }
+        <input asp-for="Input.MainImage" type="file" class="form-control" />
+    </div>
+
+    <hr />
+    <h4>Ingredientes</h4>
+    <div id="ingredients">
+        @for (int i = 0; i < (Model.Input.Ingredients?.Count ?? 0); i++)
+        {
+            <div class="ing-row mb-2">
+                <input asp-for="Input.Ingredients[@i].Name" class="form-control mb-1" placeholder="Nombre" />
+                <input asp-for="Input.Ingredients[@i].Quantity" class="form-control mb-1" placeholder="Cantidad (2 tazas)" />
+                <input asp-for="Input.Ingredients[@i].Unit" class="form-control" placeholder="Unidad (opcional)" />
+            </div>
+        }
+    </div>
+    <button type="button" class="btn btn-secondary" onclick="addIngredient()">+ Agregar ingrediente</button>
+
+    <hr />
+    <h4>Pasos</h4>
+    <div id="steps">
+        @for (int i = 0; i < (Model.Input.Steps?.Count ?? 0); i++)
+        {
+            <div class="step-row mb-3 p-2 border rounded">
+                <label class="form-label">Paso @(i + 1)</label>
+                <textarea asp-for="Input.Steps[@i].Description" class="form-control mb-2" placeholder="Descripción del paso"></textarea>
+
+                @* Si hay imagen previa, muéstrala y consérvala en un hidden *@
+                @if (!string.IsNullOrWhiteSpace(Model.Input.Steps[i].ImageUrl))
+                {
+                    <div class="mb-2">
+                        <img src="@Model.Input.Steps[i].ImageUrl" style="max-width:240px;border-radius:8px;" />
+                        <div class="text-muted small">Se conservará si no subes una nueva.</div>
+                    </div>
+                }
+                <input asp-for="Input.Steps[@i].Image" type="file" class="form-control" />
+
+                <input asp-for="Input.Steps[@i].ImageUrl" type="hidden" />
+                <input asp-for="Input.Steps[@i].Order" type="hidden" />
+            </div>
+        }
+    </div>
+    <button type="button" class="btn btn-secondary" onclick="addStep()">+ Agregar paso</button>
+
+    <hr />
+    <button type="submit" class="btn btn-primary">Mandar a revisar</button>
+    <a asp-page="/Recipes/List" class="btn btn-secondary">Cancelar</a>
+</form>
+
+@section Scripts {
+    <script>
+        let ingIndex = @(Model.Input.Ingredients?.Count ?? 0);
+        let stepIndex = @(Model.Input.Steps?.Count ?? 0);
+
+        function addIngredient(){
+          const wrap = document.getElementById('ingredients');
+          const div = document.createElement('div');
+          div.className = 'ing-row mb-2';
+          div.innerHTML = `
+            <input name="Input.Ingredients[${ingIndex}].Name" class="form-control mb-1" placeholder="Nombre" />
+            <input name="Input.Ingredients[${ingIndex}].Quantity" class="form-control mb-1" placeholder="Cantidad" />
+            <input name="Input.Ingredients[${ingIndex}].Unit" class="form-control" placeholder="Unidad (opcional)" />
+          `;
+          wrap.appendChild(div);
+          ingIndex++;
+        }
+
+        function addStep(){
+          const wrap = document.getElementById('steps');
+          const div = document.createElement('div');
+          div.className = 'step-row mb-3 p-2 border rounded';
+          div.innerHTML = `
+            <label class="form-label">Paso ${stepIndex+1}</label>
+            <textarea name="Input.Steps[${stepIndex}].Description" class="form-control mb-2" placeholder="Descripción del paso"></textarea>
+            <input name="Input.Steps[${stepIndex}].Image" type="file" class="form-control" />
+            <input name="Input.Steps[${stepIndex}].Order" type="hidden" value="${stepIndex}" />
+          `;
+          wrap.appendChild(div);
+          stepIndex++;
+        }
+    </script>
+}
