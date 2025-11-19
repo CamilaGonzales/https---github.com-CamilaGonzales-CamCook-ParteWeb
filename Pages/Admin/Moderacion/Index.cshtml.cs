@@ -50,4 +50,27 @@ public class IndexModel : PageModel
         TempData["Msg"] = "Receta rechazada.";
         return RedirectToPage();
     }
+
+    public async Task<IActionResult> OnPostEliminarAsync(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            TempData["Err"] = "ID de receta inválido.";
+            return RedirectToPage();
+        }
+
+        try
+        {
+            await _svc.EliminarRecetaAsync(id);
+            TempData["Msg"] = "Receta eliminada correctamente.";
+        }
+        catch (Exception ex)
+        {
+            // log si quieres
+            TempData["Err"] = "No se pudo eliminar la receta. Revisa los logs.";
+        }
+
+        return RedirectToPage();
+    }
+
 }

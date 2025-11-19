@@ -248,6 +248,15 @@ public class RecetaService
         return list;
     }
 
+    public async Task EliminarRecetaAsync(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return;
+
+        var docRef = _db.Collection("recetas").Document(id);
+        await docRef.DeleteAsync();
+    }
+
+
     public async Task<IDictionary<string, object>?> ObtenerPorIdAsync(string id, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(id)) return null;
