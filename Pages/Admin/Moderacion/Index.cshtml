@@ -215,13 +215,44 @@ else
 
                     <form method="post" asp-page-handler="Eliminar" asp-antiforgery="true">
                         <input type="hidden" name="id" value="@r.Id" />
-                        <button class="btn btn-outline-danger btn-sm"
-                                onclick="return confirm('¿Seguro que quieres eliminar esta receta definitivamente?');">
+                        <button type="button" class="btn btn-outline-danger btn-sm btn-eliminar">
                             Eliminar
                         </button>
                     </form>
+
                 </div>
             </div>
         </div>
     }
 }
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const botones = document.querySelectorAll('.btn-eliminar');
+
+            botones.forEach(btn => {
+                btn.addEventListener('click', function (e) {
+                    const form = this.closest('form');
+
+                    Swal.fire({
+                        title: "¿Seguro que quieres eliminar esta receta?",
+                        text: "Esta acción no se puede deshacer.",
+                        icon: "warning",
+                        showDenyButton: false,
+                        showCancelButton: true,
+                        confirmButtonText: "Eliminar",
+                        cancelButtonText: "Cancelar",
+                        confirmButtonColor: "#d33",
+                        cancelButtonColor: "#6c757d"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            form.submit(); // aquí recién se manda el POST al handler Eliminar
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+}
+

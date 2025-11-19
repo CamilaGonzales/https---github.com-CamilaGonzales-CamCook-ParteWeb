@@ -5,7 +5,6 @@
     ViewData["Title"] = "Iniciar sesión";
 }
 
-
 <h2 class="mb-3">Iniciar sesión</h2>
 
 <form method="post" class="card p-3">
@@ -19,7 +18,21 @@
 
     <div class="mb-3">
         <label asp-for="Password" class="form-label">Contraseña</label>
-        <input asp-for="Password" class="form-control" autocomplete="current-password" />
+
+        <!-- INPUT + OJITO -->
+        <div class="input-group">
+            <!-- asp-for genera id="Password" -->
+            <input asp-for="Password"
+                   class="form-control"
+                   autocomplete="current-password" />
+
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    id="togglePassword">
+                👁️
+            </button>
+        </div>
+
         <span asp-validation-for="Password" class="text-danger"></span>
     </div>
 
@@ -56,15 +69,24 @@
                 const resp = await fetch("/Account/LoginFirebase", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    credentials: "include", // IMPORTANTE
+                    credentials: "include",
                     body: JSON.stringify({ token: token })
                 });
                 if (resp.ok) {
-                    window.location.href = "/Marketplace/Index"; // o donde quieras
+                    window.location.href = "/Marketplace/Index";
                 } else {
                     alert("Error en backend");
                 }
             })
             .catch(err => console.error(err));
+    });
+
+    // 👁️ Script para mostrar/ocultar contraseña
+    document.getElementById('togglePassword').addEventListener('click', function () {
+        const input = document.getElementById('Password'); // id generado por asp-for="Password"
+        const isPassword = input.type === 'password';
+
+        input.type = isPassword ? 'text' : 'password';
+        this.textContent = isPassword ? '🙈' : '👁️'; // cambia el icono
     });
 </script>

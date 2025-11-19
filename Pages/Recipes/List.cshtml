@@ -78,10 +78,12 @@ else
                             <form method="post"
                                   asp-page="/Recipes/Delete"
                                   asp-route-id="@id"
-                                  class="d-inline ms-2"
-                                  onsubmit="return confirm('¿Eliminar la receta definitivamente?');">
+                                  data-titulo="@titulo"
+                                  class="d-inline ms-2 form-eliminar-receta">
                                 <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
                             </form>
+
+
                         }
                     </div>
                 </div>
@@ -89,3 +91,37 @@ else
         }
     </div>
 }
+
+@section Scripts {
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const deleteForms = document.querySelectorAll('.form-eliminar-receta');
+
+            deleteForms.forEach(function (form) {
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault(); // Evita que se envíe directo
+
+                    const titulo = form.getAttribute('data-titulo') || 'esta receta';
+
+                    Swal.fire({
+                        title: '¿Eliminar la receta definitivamente?',
+                        text: 'Se eliminará de forma permanente: "' + titulo + '"',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            form.submit(); // Ahora sí se envía el formulario
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+}
+
