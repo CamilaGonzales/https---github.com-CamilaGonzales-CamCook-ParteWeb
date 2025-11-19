@@ -3,9 +3,11 @@ using CamCook.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CamCook.Pages.Recipes
 {
+    [Authorize]
     public class CreateModel : PageModel
     {
         private readonly IRecipeRepository _repo;

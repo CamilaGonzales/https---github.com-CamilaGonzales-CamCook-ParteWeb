@@ -1,4 +1,6 @@
-﻿using Google.Cloud.Firestore;
+﻿using CamCook.Models;
+using Google.Cloud.Firestore;
+using System.Linq;
 
 namespace CamCook.Services;
 
@@ -6,6 +8,120 @@ public class RecetaService
 {
     private readonly FirestoreDb _db;
     public RecetaService(FirestoreDb db) => _db = db;
+
+    // 🔹 NUEVO: crear receta usando RecipeInput + IA
+    public async Task<string> CrearRecetaAsync(RecipeInput input)
+    {
+        // 1) Normalizar listas
+        var ingredientesInput = input.Ingredients ?? new List<IngredientInput>();
+        var pasosInput = input.Steps ?? new List<StepInput>();
+
+        // 2) Texto para la IA: título + nombres de ingredientes + descripciones de pasos
+        var ingredientesTexto = string.Join(" ",
+            ingredientesInput.Select(i => i.Name ?? string.Empty));
+
+        var pasosTexto = string.Join(" ",
+            pasosInput.Select(s => s.Description ?? string.Empty));
+
+        var descripcionCompuesta = $"{input.Title} {ingredientesTexto} {pasosTexto}".Trim();
+
+        bool tieneImagen =
+            (input.MainImage != null) ||
+            pasosInput.Any(s => !string.IsNullOrWhiteSpace(s.ImageUrl));
+
+        // 3) Llamar a la IA
+        var ai = AnalizadorIA.Analizar(
+            input.Title ?? string.Empty,
+            descripcionCompuesta,
+            ingredientesInput.Count,
+            tieneImagen
+        );
+
+        var aiDict = new Dictionary<string, object?>
+        {
+            ["score"] = ai.Score,
+            ["flags"] = new Dictionary<string, object?>
+            {
+                ["verdict"] = ai.Verdict.ToString().ToLowerInvariant(), // "ok", "review", "reject"
+                ["flags"] = ai.Flags,                                   // lista de mensajes
+                ["reason"] = string.Join("; ", ai.Flags)                // opcional: todo junto
+            }
+        };
+
+        // 4) Estado inicial según veredicto
+        string estado = ai.Verdict switch
+        {
+            AiVerdict.Ok => "pendiente_admin",
+            AiVerdict.Review => "revisar",
+            AiVerdict.Reject => "rechazada_ai",
+            _ => "pendiente_admin"
+        };
+
+        // 5) Mapear ingredientes a lo que espera Firestore (Recipe/Ingredient)
+        var ingredientesFs = ingredientesInput
+            .Where(i => !string.IsNullOrWhiteSpace(i.Name))
+            .Select(i => new Dictionary<string, object?>
+            {
+                ["nombre"] = i.Name ?? string.Empty,
+                ["cantidad"] = i.Quantity ?? string.Empty,
+                ["unidad"] = i.Unit ?? string.Empty
+            })
+            .ToList();
+
+        // 6) Mapear pasos a lo que espera Firestore (CookStep)
+        var pasosFs = pasosInput
+            .Where(s => !string.IsNullOrWhiteSpace(s.Description))
+            .Select((s, idx) => new Dictionary<string, object?>
+            {
+                ["descripcion"] = s.Description ?? string.Empty,
+                ["imagenUrl"] = s.ImageUrl ?? string.Empty,
+                ["orden"] = s.Order != 0 ? s.Order : idx + 1
+            })
+            .ToList();
+
+        // 7) Descripción "plana" para usar en moderación (solo texto)
+        var descripcionPlano = string.Join("\n",
+            pasosFs.Select(p => p["descripcion"]?.ToString() ?? string.Empty));
+
+        // 8) Autor
+        var authorUid = input.AuthorUid ?? string.Empty;
+        var authorEmail = input.AuthorEmail ?? string.Empty;
+
+        // 9) Imagen principal: si ya tienes una pipeline distinta, cambia esta línea
+        var imagenPrincipalUrl = pasosFs.FirstOrDefault()?["imagenUrl"]?.ToString() ?? string.Empty;
+
+        // 10) Armar diccionario final para Firestore
+        var data = new Dictionary<string, object?>
+        {
+            ["titulo"] = input.Title ?? string.Empty,
+            ["calorias"] = input.Calories ?? 0,
+            ["porciones"] = input.Servings ?? 0,
+            ["tiempoPrep"] = input.PrepTimeText ?? string.Empty,
+            ["imagenUrl"] = imagenPrincipalUrl,          // 🔸 aquí lee la moderación
+            ["creadoEn"] = Timestamp.FromDateTime(DateTime.UtcNow),
+
+            ["descripcion"] = descripcionPlano,          // 🔸 la moderación usa este campo
+            ["ingredientes"] = ingredientesFs,
+            ["pasos"] = pasosFs,
+
+            // info de autor (doble por compatibilidad)
+            ["authorUid"] = authorUid,
+            ["authorEmail"] = authorEmail,
+            ["autorUid"] = authorUid,
+            ["autorEmail"] = authorEmail,
+
+            ["estado"] = estado,
+            ["ai"] = aiDict
+        };
+
+        // 11) Guardar en la colección "recetas"
+        var docRef = _db.Collection("recetas").Document(); // id automático
+        await docRef.SetAsync(data);
+
+        return docRef.Id;
+    }
+
+    // 🔹 Lo demás queda como tú lo tenías:
 
     public async Task<List<RecetaPendienteDto>> ObtenerPendientesAsync()
     {
@@ -27,13 +143,8 @@ public class RecetaService
         return list;
     }
 
-    /// <summary>
-    /// Publica la receta y agrega el rol "chef" al autor (roles como array).
-    /// Conserva el campo legado "rol" si ya lo usas en otras partes.
-    /// </summary>
     public async Task AprobarRecetaAsync(string recetaId, string? autorUid = null)
     {
-        // 1) Publicar receta
         var recetaRef = _db.Collection("recetas").Document(recetaId);
         await recetaRef.UpdateAsync(new Dictionary<string, object>
         {
@@ -41,21 +152,16 @@ public class RecetaService
             ["publicadoEn"] = Timestamp.FromDateTime(DateTime.UtcNow)
         });
 
-        // 2) Agregar rol "chef" al autor (array de roles)
         if (!string.IsNullOrWhiteSpace(autorUid))
         {
             var userRef = _db.Collection("usuarios").Document(autorUid);
 
-            // Asegura el array de roles y agrega "chef" sin duplicar
             await userRef.UpdateAsync(new Dictionary<string, object>
             {
-                ["roles"] = FieldValue.ArrayUnion("usuario", "chef"), // si no existía "usuario", también lo agrega
+                ["roles"] = FieldValue.ArrayUnion("usuario", "chef"),
                 ["actualizadoEn"] = Timestamp.FromDateTime(DateTime.UtcNow)
             });
 
-            // (Opcional) Mantener compatibilidad con campo legado "rol"
-            // - Si dependes de 'rol' en algún lado, puedes setearlo a "chef"
-            //   solo si antes era "usuario". Si no lo necesitas, elimina este bloque.
             await _db.RunTransactionAsync(async tx =>
             {
                 var snap = await tx.GetSnapshotAsync(userRef);
@@ -78,10 +184,9 @@ public class RecetaService
         {
             ["estado"] = "rechazada",
             ["rechazadaEn"] = Timestamp.FromDateTime(DateTime.UtcNow),
-            ["motivoRechazo"] = motivo // <-- NUEVO: campo plano para leer fácil en UI
+            ["motivoRechazo"] = motivo
         };
 
-        // Mantener también en ai.flags.reasonAdmin (o reason si prefieres)
         var snap = await docRef.GetSnapshotAsync();
         if (snap.Exists)
         {
@@ -95,7 +200,7 @@ public class RecetaService
                 ? flagsDict
                 : new Dictionary<string, object>();
 
-            flags["reasonAdmin"] = motivo; // diferenciamos del motivo de la IA
+            flags["reasonAdmin"] = motivo;
             ai["flags"] = flags;
             updates["ai"] = ai;
         }
@@ -103,12 +208,8 @@ public class RecetaService
         await docRef.UpdateAsync(updates);
     }
 
-    /// <summary>
-    /// Devuelve recetas publicadas, ordenadas por publicadoEn (si existe).
-    /// </summary>
     public async Task<List<Dictionary<string, object>>> ObtenerPublicadasAsync(int limit = 100)
     {
-        // Nada de OrderBy (evita el índice compuesto)
         var query = _db.Collection("recetas")
                        .WhereEqualTo("estado", "publicada")
                        .Limit(limit);
@@ -122,13 +223,10 @@ public class RecetaService
             var dict = doc.ToDictionary();
             dict["id"] = doc.Id;
 
-            // --- OPCIONAL: agregar un campo temporal para ordenar en memoria ---
-            // 1) Si tienes 'publicadoEn' como Timestamp en el doc, úsalo:
             if (dict.TryGetValue("publicadoEn", out var pubObj) && pubObj is Timestamp tsPub)
             {
                 dict["__orden"] = tsPub.ToDateTime();
             }
-            // 2) Si NO tienes 'publicadoEn', usa la hora de creación del snapshot:
             else if (doc.CreateTime.HasValue)
             {
                 dict["__orden"] = doc.CreateTime.Value.ToDateTime();
@@ -137,38 +235,28 @@ public class RecetaService
             {
                 dict["__orden"] = DateTime.MinValue;
             }
-            // -------------------------------------------------------------------
+
             list.Add(dict);
         }
 
-        // Ordenar en memoria (no requiere índice)
         list = list
             .OrderByDescending(d => d["__orden"])
             .ToList();
 
-        // limpiar el campo temporal si quieres
         foreach (var d in list) d.Remove("__orden");
 
         return list;
     }
 
-    /// <summary>
-    /// Lee el documento 'recetas/{id}' y lo entrega como diccionario flexible.
-    /// Retorna null si no existe.
-    /// </summary>
     public async Task<IDictionary<string, object>?> ObtenerPorIdAsync(string id, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(id)) return null;
 
         var docRef = _db.Collection("recetas").Document(id);
-
-        // Importante: pasar el CancellationToken del request
         var snap = await docRef.GetSnapshotAsync(ct);
 
         if (!snap.Exists) return null;
 
-        // Convierte el documento completo a Dictionary<string, object>
-        // Las listas y objetos anidados se devuelven como List<object> y Dictionary<string, object>
         return snap.ToDictionary();
     }
 }

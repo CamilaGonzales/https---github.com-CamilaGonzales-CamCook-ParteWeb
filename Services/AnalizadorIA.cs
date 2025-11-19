@@ -57,9 +57,6 @@ public static class AnalizadorIA
         // Ingredientes
         if (ingredientesCount < 2) { score -= 0.10; flags.Add("Pocos ingredientes"); }
 
-        // Imagen
-        if (!tieneImagen) { score -= 0.10; flags.Add("Sin imagen"); }
-
         // Contacto externo
         if (RxUrl.IsMatch(texto)) { score -= 0.25; flags.Add("Contiene URL"); }
         if (RxMail.IsMatch(texto)) { score -= 0.20; flags.Add("Contiene email"); }

@@ -1,0 +1,21 @@
+﻿@page
+@model CamCook.Pages.Marketplace.IndexModel
+@{
+}
+@foreach (var prov in Model.Proveedores)
+{
+    <div class="card p-2 mb-3" style="width:250px">
+        <img src="@prov["imagen"]" class="card-img-top" />
+
+        <div class="card-body">
+            <h5>@prov["nombre"]</h5>
+
+            <a asp-page="/Marketplace/ProveedorDetalle"
+               asp-route-id="@prov["proveedorId"]"
+               class="btn btn-warning">
+                Ver Productos
+            </a>
+        </div>
+    </div>
+}
+

@@ -1,37 +1,79 @@
 ﻿@using System.Security.Claims
 @inject Google.Cloud.Firestore.FirestoreDb Db
 @{
-    var isAdmin = false;
+    bool esProveedor = false;
+    bool isAdmin = false;
+
+    string googleUid = User.FindFirstValue(ClaimTypes.NameIdentifier); // ahora es google_uid
+
 
     if (User?.Identity?.IsAuthenticated ?? false)
     {
-        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("uid");
-
-        if (!string.IsNullOrWhiteSpace(uid))
+        if (!string.IsNullOrEmpty(googleUid))
         {
-            var snap = await Db.Collection("usuarios").Document(uid).GetSnapshotAsync();
-            if (snap.Exists)
+            var provSnap = await Db.Collection("proveedores")
+                .WhereEqualTo("userId", googleUid) // proveedores enlazados por google_uid
+                .WhereEqualTo("estado_validacion", "aprobado")
+                .GetSnapshotAsync();
+
+            esProveedor = provSnap.Count > 0;
+             // ADMIN
+            var userDoc = await Db.Collection("usuarios")
+                .Document(googleUid)
+                .GetSnapshotAsync();
+
+            if (userDoc.Exists)
             {
-                var d = snap.ToDictionary();
-                isAdmin =
-                    (d.TryGetValue("rol", out var r) && string.Equals(r?.ToString(), "admin", StringComparison.OrdinalIgnoreCase))
-                    || (d.TryGetValue("esAdmin", out var ea) && ea is bool b && b);
+                // Campo esAdmin (bool)
+                if (userDoc.TryGetValue<bool>("esAdmin", out var adminFlag))
+                {
+                    if (adminFlag == true)
+                        isAdmin = true;
+                }
+
+                // Campo rol (string)
+                if (userDoc.TryGetValue<string>("rol", out var rolString))
+                {
+                    if (rolString.Equals("admin", StringComparison.OrdinalIgnoreCase))
+                        isAdmin = true;
+                }
             }
+        }
+        else
+        {
+            <p style="color:red;">UID es NULL — tus claims no están configurados.</p>
         }
     }
 }
+@if (!User.Identity.IsAuthenticated)
+{
+    <p>DEBUG UID CLAIM: @googleUid</p>
+
+    <p>No has iniciado sesión.</p>
+}
+else
+{
+    <p style="color:red; font-weight:bold;">
+        No eres un proveedor aprobado o tu UID no coincide.
+    </p>
+}
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - CamCook</title>
+
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/CamCook.styles.css" asp-append-version="true" />
+
     @RenderSection("Styles", required: false)
 </head>
+
 <body>
+    <!-- NAVBAR -->
     <header>
         <nav class="navbar navbar-expand-lg navbar-light bg-warning shadow-sm">
             <div class="container">
@@ -40,27 +82,44 @@
                     <span class="fs-4 fw-bold text-dark">CamCook</span>
                 </a>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
-                        aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#navbarContent" aria-controls="navbarContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
 
                 <div class="collapse navbar-collapse" id="navbarContent">
                     <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark fw-semibold" asp-page="/Index">Inicio</a>
-                        </li>
+
                         <li class="nav-item">
                             <a class="nav-link text-dark fw-semibold" asp-page="/Recipes/List">Recetas</a>
                         </li>
+
                         <li class="nav-item">
                             <a class="nav-link text-dark fw-semibold" asp-page="/Privacy">Privacidad</a>
                         </li>
+
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-page="/Recipes/Create">Nueva receta</a>
                         </li>
 
-                        @* SOLO SE MUESTRA SI EL USUARIO ES ADMIN (consultado en Firestore) *@
+                        <li class="nav-item">
+                            <a class="nav-link text-dark fw-semibold" asp-page="/Marketplace/Index">Marketplace</a>
+                        </li>
+
+
+                        
+                        <!-- SOLO PROVEEDORES APROBADOS -->
+                        @if (esProveedor)
+                        {
+                            <li class="nav-item">
+                            <a class="nav-link text-dark fw-semibold" asp-page="/Proveedor/MisProductos">
+                                Mis productos
+                            </a>
+                        </li>
+                        }
+
+                        <!-- ADMIN -->
                         @if (isAdmin)
                         {
                             <li class="nav-item">
@@ -70,19 +129,21 @@
                             </li>
                         }
 
-                        @* USUARIO AUTENTICADO *@
+                        <!-- USUARIO LOGIN -->
                         @if (User?.Identity?.IsAuthenticated ?? false)
                         {
                             <li class="nav-item">
-                                <span class="nav-link text-dark fw-semibold">@User.Identity?.Name</span>
+                                <span class="nav-link text-dark fw-semibold">
+                                    @User.Identity?.Name
+                                </span>
                             </li>
+
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-page="/Account/Logout">Cerrar sesión</a>
                             </li>
                         }
                         else
                         {
-                            @* VISITANTE *@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-page="/Account/Login">Login</a>
                             </li>
@@ -90,20 +151,23 @@
                                 <a class="nav-link text-dark" asp-page="/Account/Register">Registro</a>
                             </li>
                         }
+
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
 
+    <!-- CONTENIDO -->
     <div class="container">
         @if (TempData["ok"] is string okMsg)
         {
-            <div class="alert alert-success mt-3" role="alert">@okMsg</div>
+            <div class="alert alert-success mt-3">@okMsg</div>
         }
+
         @if (TempData["error"] is string errMsg)
         {
-            <div class="alert alert-danger mt-3" role="alert">@errMsg</div>
+            <div class="alert alert-danger mt-3">@errMsg</div>
         }
 
         <main role="main" class="pb-3">
@@ -111,18 +175,19 @@
         </main>
     </div>
 
+    <!-- FOOTER -->
     <footer class="bg-dark text-white mt-5 pt-4 pb-3">
         <div class="container text-center">
-            <div class="mb-3">
-                <img src="~/img/logo.png" alt="CamCook Logo" width="50" />
-                <h5 class="mt-2">CamCook – Tu recetario virtual</h5>
-                <p class="small">Explora, guarda y comparte tus recetas favoritas desde cualquier lugar.</p>
-            </div>
+            <img src="~/img/logo.png" width="50" />
+            <h5 class="mt-2">CamCook – Tu recetario virtual</h5>
+            <p class="small">Explora, guarda y comparte tus recetas favoritas.</p>
+
             <div class="d-flex justify-content-center gap-3 mb-3">
                 <a href="#" class="text-white text-decoration-none">Instagram</a>
                 <a href="#" class="text-white text-decoration-none">Facebook</a>
                 <a href="#" class="text-white text-decoration-none">Contacto</a>
             </div>
+
             <p class="small mb-0">&copy; 2025 CamCook. Todos los derechos reservados.</p>
         </div>
     </footer>
@@ -131,6 +196,6 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
 
-    @await RenderSectionAsync("Scripts", required: false)
+    @RenderSection("Scripts", required: false)
 </body>
 </html>

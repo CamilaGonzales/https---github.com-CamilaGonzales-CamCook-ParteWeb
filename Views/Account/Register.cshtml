@@ -1,0 +1,93 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@model CamCook.Models.RegisterViewModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Registro – Cook Cam</title>
+    <!-- Si deseas, habilita una fuente profesional (opcional) -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body class="bg-cream full-center">
+    <div class="reg-pro-wrapper">
+        <!-- Panel de marca / información -->
+        <aside class="reg-pro-hero">
+            <div class="reg-pro-hero-inner">
+                <div class="reg-badge">Cook Cam</div>
+                <h1 class="reg-hero-title">Crea, captura y comparte tus recetas</h1>
+                <p class="reg-hero-sub">
+                    La app que convierte tus platos en inspiración. Guarda tus creaciones, sigue a otros cocineros y
+                    descubre nuevas ideas cada día.
+                </p>
+
+                <ul class="reg-hero-list">
+                    <li>Organiza recetas con fotos paso a paso</li>
+                    <li>Explora recomendaciones personalizadas</li>
+                    <li>Comparte con la comunidad gastronómica</li>
+                </ul>
+
+                <div class="reg-hero-cta">
+                    <span class="reg-hero-note">¿Ya eres miembro?</span>
+                    <a class="link-strong" asp-action="Login" asp-controller="Account">Inicia sesión</a>
+                </div>
+            </div>
+            <!-- decorativos -->
+            <div class="blob blob-1"></div>
+            <div class="blob blob-2"></div>
+        </aside>
+
+        <!-- Panel formulario -->
+        <main class="reg-pro-form">
+            <div class="reg-form-card">
+                <h2 class="reg-form-title">Registro de usuario</h2>
+                <p class="reg-form-sub">Crea tu cuenta para empezar gratis.</p>
+
+                <form asp-action="Register" asp-controller="Account" method="post" class="form">
+                    @Html.AntiForgeryToken()
+
+                    <div class="form-group">
+                        <label asp-for="Username" class="label"></label>
+                        <input asp-for="Username" class="input input-lg" autocomplete="username" />
+                        <span asp-validation-for="Username" class="text-val"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="Email" class="label"></label>
+                        <input asp-for="Email" class="input input-lg" autocomplete="email" />
+                        <span asp-validation-for="Email" class="text-val"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="Password" class="label"></label>
+                        <input asp-for="Password" class="input input-lg" autocomplete="new-password" />
+                        <span asp-validation-for="Password" class="text-val"></span>
+                    </div>
+
+                    <button type="submit" class="btn-primary btn-block">
+                        Registrarse
+                    </button>
+
+                    <p class="reg-legal">
+                        Al registrarte aceptas nuestros <a href="#">Términos</a> y <a href="#">Política de privacidad</a>.
+                    </p>
+                </form>
+
+                <p class="register-link">
+                    ¿Ya tienes cuenta?
+                    <a asp-action="Login" asp-controller="Account">Inicia sesión</a>
+                </p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
+
+
+

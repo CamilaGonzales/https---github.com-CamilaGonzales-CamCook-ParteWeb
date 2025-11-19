@@ -1,7 +1,34 @@
 ﻿@page
 @model CamCook.Pages.Admin.Moderacion.IndexModel
+@using System.Text.RegularExpressions
 @{
     ViewData["Title"] = "Moderación de Recetas";
+}
+
+@functions {
+    // Resalta las palabras encontradas dentro del texto usando <mark>
+    public string ResaltarPalabras(string texto, List<string> palabras)
+    {
+        if (string.IsNullOrWhiteSpace(texto) || palabras == null || palabras.Count == 0)
+            return texto;
+
+        var patrones = palabras
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Select(p => Regex.Escape(p.Trim()))
+            .ToList();
+
+        if (patrones.Count == 0)
+            return texto;
+
+        var pattern = string.Join("|", patrones);
+
+        return Regex.Replace(
+            texto,
+            pattern,
+            m => $"<mark>{m.Value}</mark>",
+            RegexOptions.IgnoreCase
+        );
+    }
 }
 
 <h2 class="mb-3">Moderación de Recetas (Pendientes y Rechazadas por IA)</h2>
@@ -29,6 +56,25 @@ else
         string autorUid = data.TryGetValue("autorUid", out var a) ? a?.ToString() ?? "" : "";
         string estado = data.TryGetValue("estado", out var st) ? st?.ToString() ?? "" : "";
 
+        // === IMAGEN DE PORTADA (ajusta las keys según tu Firestore) ===
+        string imgUrl = "";
+        var posiblesKeys = new[] {
+            "fotoPortadaUrl", "imagenPortadaUrl", "imagenUrl", "imageUrl",
+            "fotoUrl", "portadaUrl", "imagen", "foto"
+        };
+        foreach (var key in posiblesKeys)
+        {
+            if (data.TryGetValue(key, out var imgObj) && imgObj != null)
+            {
+                var s = imgObj.ToString();
+                if (!string.IsNullOrWhiteSpace(s))
+                {
+                    imgUrl = s;
+                    break;
+                }
+            }
+        }
+
         // --- ROLES DEL AUTOR (barrita y badges) ---
         var roles = Model.RolesPorAutor.TryGetValue(autorUid ?? "", out var rr) ? rr : new List<string>();
         var rolesTexto = roles.Count > 0 ? string.Join(" - ", roles) : "usuario";
@@ -36,37 +82,84 @@ else
         // --- MOTIVOS DE RECHAZO (IA / ADMIN) ---
         string verdict = "";
         string motivoIA = "";
+        var palabrasRechazo = new List<string>();
+
         if (data.TryGetValue("ai", out var aiObj) && aiObj is Dictionary<string, object> aiDict)
         {
             if (aiDict.TryGetValue("flags", out var flagsObj) && flagsObj is Dictionary<string, object> flagsDict)
             {
                 verdict = flagsDict.TryGetValue("verdict", out var v) ? v?.ToString() ?? "" : "";
-                // motivo de IA
                 motivoIA = flagsDict.TryGetValue("reason", out var rz) ? rz?.ToString() ?? "" : "";
-                // motivo guardado por el admin dentro de ai.flags (si lo usaste así)
                 if (string.IsNullOrWhiteSpace(motivoIA))
                     motivoIA = flagsDict.TryGetValue("reasonAdmin", out var rza) ? rza?.ToString() ?? "" : motivoIA;
+
+                // AQUÍ LEEMOS LA LISTA QUE DEVUELVE AnalizadorIA
+                // Ajusta "flags" si la guardaste con otro nombre (ej: "listaFlags")
+                if (flagsDict.TryGetValue("flags", out var listaFlagsObj) && listaFlagsObj is IEnumerable<object> listaFlags)
+                {
+                    var rxVulgar = new Regex(@"Lenguaje vulgar:\s*(.+)", RegexOptions.IgnoreCase);
+                    var rxIlegal = new Regex(@"Contenido prohibido:\s*(.+)", RegexOptions.IgnoreCase);
+
+                    foreach (var item in listaFlags)
+                    {
+                        var msg = item?.ToString() ?? "";
+                        if (string.IsNullOrWhiteSpace(msg)) continue;
+
+                        var m1 = rxVulgar.Match(msg);
+                        var m2 = rxIlegal.Match(msg);
+
+                        if (m1.Success)
+                        {
+                            var palabra = m1.Groups[1].Value.Trim();
+                            if (!string.IsNullOrWhiteSpace(palabra))
+                                palabrasRechazo.Add(palabra);
+                        }
+                        else if (m2.Success)
+                        {
+                            var palabra = m2.Groups[1].Value.Trim();
+                            if (!string.IsNullOrWhiteSpace(palabra))
+                                palabrasRechazo.Add(palabra);
+                        }
+                    }
+
+                    palabrasRechazo = palabrasRechazo
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                }
             }
         }
-        // motivo plano (compatibilidad)
+
         string motivoPlano = data.TryGetValue("motivoRechazo", out var mr) ? mr?.ToString() ?? "" : "";
         string motivoMostrar = !string.IsNullOrWhiteSpace(motivoPlano) ? motivoPlano : motivoIA;
 
+        // Descripción con palabras resaltadas
+        var descripcionResaltada = ResaltarPalabras(descripcion, palabrasRechazo);
+
         <div class="card mb-3">
+           
             <div class="card-body">
                 <h5 class="card-title">@titulo</h5>
-                <p class="card-text" style="white-space:pre-wrap">@descripcion</p>
 
+                @* IMAGEN MÁS PEQUEÑA DEBAJO DEL TÍTULO *@
+                @if (!string.IsNullOrEmpty(imgUrl))
+                {
+                    <img src="@imgUrl"
+                         alt="@titulo"
+                         class="mb-2"
+                         style="max-width: 250px; max-height: 150px; object-fit: cover; display:block; border-radius: 8px;" />
+                }
+
+                <p class="card-text" style="white-space:pre-wrap">
+                    @Html.Raw(descripcionResaltada)
+                </p>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                     <small class="text-muted">Autor: @autorUid</small>
                     <span class="text-muted">|</span>
                     <small class="text-muted">Estado: @estado</small>
                     <span class="text-muted">|</span>
 
-                    @* “Barrita” de roles (texto) *@
                     <small class="text-muted">Roles: @rolesTexto</small>
 
-                    @* Badges visuales *@
                     <div>
                         @foreach (var role in roles)
                         {
@@ -78,34 +171,47 @@ else
                     </div>
                 </div>
 
-                @* --- BLOQUE NUEVO: mostrar motivo de rechazo --- *@
                 @if (!string.IsNullOrWhiteSpace(motivoMostrar) && !string.Equals(estado, "publicada", StringComparison.OrdinalIgnoreCase))
                 {
                     <div class="alert alert-warning mt-2 mb-0 p-2">
                         <strong>@(estado == "rechazada_ai" ? "Motivo (IA):" : "Motivo de rechazo:")</strong>
                         <div class="mt-1" style="white-space:pre-wrap">@motivoMostrar</div>
+
                         @if (!string.IsNullOrWhiteSpace(verdict))
                         {
                             <small class="text-muted d-block mt-1">Veredicto IA: @verdict</small>
                         }
+
+                        @if (palabrasRechazo.Any())
+                        {
+                            <small class="text-muted d-block mt-1">
+                                Palabras detectadas:
+                                <strong>@string.Join(", ", palabrasRechazo)</strong>
+                            </small>
+                        }
                     </div>
                 }
-                @* ------------------------------------------------ *@
 
-                <div class="mt-3 d-flex gap-2">
+                <div class="mt-3 d-flex flex-wrap gap-2">
                     <form method="post" asp-page-handler="Aprobar" asp-antiforgery="true">
                         <input type="hidden" name="id" value="@r.Id" />
                         <input type="hidden" name="autorUid" value="@autorUid" />
                         <button class="btn btn-success btn-sm">Aprobar</button>
                     </form>
 
-                    <form method="post" asp-page-handler="Rechazar" asp-antiforgery="true">
+                    <form method="post" asp-page-handler="Rechazar" asp-antiforgery="true" class="d-flex gap-2">
                         <input type="hidden" name="id" value="@r.Id" />
                         <div class="input-group input-group-sm">
                             <input name="motivo" class="form-control" placeholder="Motivo de rechazo" />
                             <button class="btn btn-danger">Rechazar</button>
                         </div>
                     </form>
+
+                    <a class="btn btn-outline-secondary btn-sm"
+                       asp-page="/Admin/Recipes/Preview"
+                       asp-route-id="@r.Id">
+                        Ver receta
+                    </a>
                 </div>
             </div>
         </div>

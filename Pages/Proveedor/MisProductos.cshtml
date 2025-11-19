@@ -1,0 +1,21 @@
+﻿@page
+@model CamCook.Pages.Proveedor.MisProductosModel
+@{
+}
+<h2>Mis Productos</h2>
+
+@foreach (var p in Model.Productos)
+{
+    <div class="card p-2 mb-3" style="width:250px">
+        <img src="@p["imagen"]" />
+
+        <div class="card-body">
+            <h5>@p["nombre"]</h5>
+            <p>@p["precio"] Bs</p>
+        </div>
+    </div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-warning">@Model.MensajeError</div>
+}

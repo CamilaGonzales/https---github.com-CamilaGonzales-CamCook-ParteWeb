@@ -8,7 +8,9 @@
     var titulo = data.ContainsKey("titulo") ? data["titulo"] : "(sin título)";
     var ai = data.ContainsKey("ai") ? (Dictionary<string, object>)data["ai"] : null;
     var flags = ai?["flags"] as IEnumerable<object> ?? Array.Empty<object>();
-    var autorUid = data.ContainsKey("autorUid") ? data["autorUid"]?.ToString() : "";
+    var autorUid = data.ContainsKey("authorUid")
+      ? data["authorUid"]?.ToString()
+      : (data.ContainsKey("autorUid") ? data["autorUid"]?.ToString() : "");
 
     <div class="card p-3 mb-3">
         <h4>@titulo</h4>

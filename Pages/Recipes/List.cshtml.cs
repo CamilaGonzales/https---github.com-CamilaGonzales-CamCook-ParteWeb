@@ -1,10 +1,12 @@
 using CamCook.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Threading;
 
 
 namespace CamCook.Pages.Recipes;
 
+[AllowAnonymous]
 public class ListModel : PageModel
 {
     private readonly RecetaService _svc;

@@ -1,6 +1,7 @@
 using CamCook.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Security.Claims;
 
 namespace CamCook.Pages.Recipes
 {
@@ -23,7 +24,9 @@ namespace CamCook.Pages.Recipes
             var recipe = await _repo.GetByIdAsync(Id);
             if (recipe == null) return NotFound();
 
-            var currentUserUid = User.Identity?.Name;
+            var currentUserUid = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                                 ?? User.FindFirstValue("uid");
+
             if (recipe.AuthorUid != currentUserUid)
                 return Forbid();
 
@@ -33,10 +36,13 @@ namespace CamCook.Pages.Recipes
 
         public async Task<IActionResult> OnPostAsync()
         {
-            var currentUserUid = User.Identity?.Name;
+            var currentUserUid = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                                 ?? User.FindFirstValue("uid");
+
             try
             {
                 await _repo.DeleteAsync(Id, currentUserUid);
+                TempData["ok"] = "Tu receta fue eliminada correctamente.";
             }
             catch (UnauthorizedAccessException)
             {
@@ -44,9 +50,10 @@ namespace CamCook.Pages.Recipes
             }
             catch
             {
-                return BadRequest();
+                TempData["error"] = "No se pudo eliminar la receta. Intenta de nuevo.";
             }
 
+            // Volvemos a la lista SIEMPRE (no login)
             return RedirectToPage("/Recipes/List");
         }
     }

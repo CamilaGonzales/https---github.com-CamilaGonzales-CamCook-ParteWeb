@@ -7,29 +7,38 @@
 <h2>Editar Receta</h2>
 
 <form method="post" enctype="multipart/form-data">
-    <div class="mb-3">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+
+    <div asp-validation-summary="All" class="text-danger mb-2"></div>
+
+    <fieldset class="mb-3">
         <label class="form-label">Título</label>
-        <input asp-for="Input.Title" class="form-control" />
-    </div>
+        <input asp-for="Input.Title" class="form-control"
+               onblur="cleanTextAndCapitalize(this)" />
 
-    <div class="mb-3">
-        <label class="form-label">Calorías</label>
-        <input asp-for="Input.Calories" class="form-control" type="number" />
-    </div>
+        <label class="form-label mt-2">Calorías</label>
+        <input asp-for="Input.Calories"
+               type="number"
+               class="form-control"
+               min="1"
+               required />
 
-    <div class="mb-3">
-        <label class="form-label">Porciones</label>
-        <input asp-for="Input.Servings" class="form-control" type="number" />
-    </div>
+        <label class="form-label mt-2">Porciones</label>
+        <input asp-for="Input.Servings"
+               type="number"
+               class="form-control"
+               min="1"
+               required />
 
-    <div class="mb-3">
-        <label class="form-label">Tiempo de preparación</label>
-        <input asp-for="Input.PrepTimeText" class="form-control" />
-    </div>
+        <label class="form-label mt-2">Tiempo de preparación</label>
+        <input asp-for="Input.PrepTimeText"
+               class="form-control"
+               placeholder="Ej: 30 minutos"
+               onblur="cleanTextAndCapitalize(this)" />
 
-    <div class="mb-3">
-        <label class="form-label">Imagen final del plato</label>
-        @* Vista previa si existe *@
+        <label class="form-label mt-2">Imagen final del plato</label>
+
         @if (!string.IsNullOrWhiteSpace(Model.ExistingMainImageUrl))
         {
             <div class="mb-2">
@@ -37,48 +46,105 @@
                 <div class="text-muted small">Se conservará si no subes una nueva.</div>
             </div>
         }
+
         <input asp-for="Input.MainImage" type="file" class="form-control" />
-    </div>
+    </fieldset>
 
     <hr />
     <h4>Ingredientes</h4>
-    <div id="ingredients">
+
+    <div id="ingredients-list">
         @for (int i = 0; i < (Model.Input.Ingredients?.Count ?? 0); i++)
         {
-            <div class="ing-row mb-2">
-                <input asp-for="Input.Ingredients[@i].Name" class="form-control mb-1" placeholder="Nombre" />
-                <input asp-for="Input.Ingredients[@i].Quantity" class="form-control mb-1" placeholder="Cantidad (2 tazas)" />
-                <input asp-for="Input.Ingredients[@i].Unit" class="form-control" placeholder="Unidad (opcional)" />
+            <div class="row g-2 mb-2 ingredient-item">
+                <div class="col-md-4">
+                    <input class="form-control ingredient-name"
+                           placeholder="Nombre"
+                           name="Input.Ingredients[@i].Name"
+                           value="@Model.Input.Ingredients[@i].Name"
+                           required />
+                </div>
+
+                <div class="col-md-3">
+                    <input class="form-control ingredient-amount"
+                           placeholder="Cantidad (2 tazas)"
+                           name="Input.Ingredients[@i].Quantity"
+                           type="text"
+                           value="@Model.Input.Ingredients[@i].Quantity"
+                           required />
+                </div>
+
+                <div class="col-md-3">
+                    <input class="form-control"
+                           placeholder="Unidad (opcional)"
+                           name="Input.Ingredients[@i].Unit"
+                           value="@Model.Input.Ingredients[@i].Unit" />
+                </div>
+
+                <div class="col-md-2 d-flex align-items-center">
+                    <button type="button"
+                            class="btn btn-outline-danger btn-sm btn-remove-ingredient">
+                        Quitar
+                    </button>
+                </div>
             </div>
         }
     </div>
-    <button type="button" class="btn btn-secondary" onclick="addIngredient()">+ Agregar ingrediente</button>
+
+    <button type="button" id="btn-add-ingredient" class="btn btn-secondary mt-1">
+        + Agregar ingrediente
+    </button>
 
     <hr />
-    <h4>Pasos</h4>
+    <h4 class="mt-4">Pasos</h4>
+
     <div id="steps">
         @for (int i = 0; i < (Model.Input.Steps?.Count ?? 0); i++)
         {
-            <div class="step-row mb-3 p-2 border rounded">
-                <label class="form-label">Paso @(i + 1)</label>
-                <textarea asp-for="Input.Steps[@i].Description" class="form-control mb-2" placeholder="Descripción del paso"></textarea>
+            <div class="row g-2 mb-2 step-item">
+                <div class="col-md-7">
+                    <input class="form-control"
+                           placeholder="Descripción del paso"
+                           name="Input.Steps[@i].Description"
+                           value="@Model.Input.Steps[@i].Description"
+                           required />
+                </div>
 
-                @* Si hay imagen previa, muéstrala y consérvala en un hidden *@
-                @if (!string.IsNullOrWhiteSpace(Model.Input.Steps[i].ImageUrl))
-                {
-                    <div class="mb-2">
-                        <img src="@Model.Input.Steps[i].ImageUrl" style="max-width:240px;border-radius:8px;" />
-                        <div class="text-muted small">Se conservará si no subes una nueva.</div>
-                    </div>
-                }
-                <input asp-for="Input.Steps[@i].Image" type="file" class="form-control" />
+                <div class="col-md-3">
+                    @* CONTENEDOR DEL PREVIEW *@
+                    @if (!string.IsNullOrWhiteSpace(Model.Input.Steps[i].ImageUrl))
+                    {
+                        <div class="mb-1 step-preview">
+                            <img src="@Model.Input.Steps[i].ImageUrl"
+                                 style="max-width:120px;border-radius:6px;" />
+                            <div class="text-muted small">
+                                Se conservará si no subes una nueva.
+                            </div>
+                        </div>
+                    }
 
-                <input asp-for="Input.Steps[@i].ImageUrl" type="hidden" />
-                <input asp-for="Input.Steps[@i].Order" type="hidden" />
+                    <input type="file"
+                           class="form-control"
+                           name="Input.Steps[@i].Image" />
+                </div>
+
+                <div class="col-md-2 d-flex align-items-center">
+                    <button type="button"
+                            class="btn btn-outline-danger btn-sm btn-remove-step">
+                        Quitar
+                    </button>
+                </div>
+
+                <input type="hidden" name="Input.Steps[@i].Order" value="@Model.Input.Steps[@i].Order" />
+                <input type="hidden" name="Input.Steps[@i].ImageUrl" value="@Model.Input.Steps[@i].ImageUrl" />
             </div>
         }
     </div>
-    <button type="button" class="btn btn-secondary" onclick="addStep()">+ Agregar paso</button>
+
+
+    <button type="button" id="btn-add-step" class="btn btn-secondary mt-1">
+        + Agregar paso
+    </button>
 
     <hr />
     <button type="submit" class="btn btn-primary">Mandar a revisar</button>
@@ -87,34 +153,191 @@
 
 @section Scripts {
     <script>
-        let ingIndex = @(Model.Input.Ingredients?.Count ?? 0);
-        let stepIndex = @(Model.Input.Steps?.Count ?? 0);
+        // === MISMAS VALIDACIONES Y FORMATO QUE CREATE ===
 
-        function addIngredient(){
-          const wrap = document.getElementById('ingredients');
-          const div = document.createElement('div');
-          div.className = 'ing-row mb-2';
-          div.innerHTML = `
-            <input name="Input.Ingredients[${ingIndex}].Name" class="form-control mb-1" placeholder="Nombre" />
-            <input name="Input.Ingredients[${ingIndex}].Quantity" class="form-control mb-1" placeholder="Cantidad" />
-            <input name="Input.Ingredients[${ingIndex}].Unit" class="form-control" placeholder="Unidad (opcional)" />
-          `;
-          wrap.appendChild(div);
-          ingIndex++;
+        function cleanTextAndCapitalize(input) {
+            if (!input || !input.value) return;
+            let text = input.value.trim();
+            text = text.replace(/\s+/g, " ");
+
+            if (input.name && input.name.startsWith("Input.Steps")) {
+                text = text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+            } else {
+                text = text
+                    .split(" ")
+                    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                    .join(" ");
+            }
+            input.value = text;
         }
 
-        function addStep(){
-          const wrap = document.getElementById('steps');
-          const div = document.createElement('div');
-          div.className = 'step-row mb-3 p-2 border rounded';
-          div.innerHTML = `
-            <label class="form-label">Paso ${stepIndex+1}</label>
-            <textarea name="Input.Steps[${stepIndex}].Description" class="form-control mb-2" placeholder="Descripción del paso"></textarea>
-            <input name="Input.Steps[${stepIndex}].Image" type="file" class="form-control" />
-            <input name="Input.Steps[${stepIndex}].Order" type="hidden" value="${stepIndex}" />
-          `;
-          wrap.appendChild(div);
-          stepIndex++;
+        document.addEventListener("input", e => {
+            const el = e.target;
+            if (el.classList.contains('ingredient-amount')) {
+                el.value = el.value.replace(/[^0-9.,/]/g, '');
+                if (el.value.startsWith('-')) el.value = el.value.replace('-', '');
+                return;
+            }
+
+            if (el.type === "number") {
+                const v = parseFloat(el.value);
+                if (isNaN(v) || v < 0) el.value = "";
+                return;
+            }
+
+            if (el.type === "text") {
+                if (!el.value.trim()) return;
+                if (el.name && el.name.startsWith("Input.Steps")) {
+                    const cursor = el.selectionStart;
+                    el.value = el.value.charAt(0).toUpperCase() + el.value.slice(1).toLowerCase();
+                    el.setSelectionRange(cursor, cursor);
+                } else {
+                    const palabras = el.value.split(" ").map(p => {
+                        return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
+                    });
+                    const cursor = el.selectionStart;
+                    el.value = palabras.join(" ");
+                    el.setSelectionRange(cursor, cursor);
+                }
+            }
+        });
+
+        // --- EVITAR NÚMEROS NEGATIVOS ---
+        document.addEventListener("input", e => {
+            if (e.target.type === "number") {
+                const v = parseFloat(e.target.value);
+                if (isNaN(v) || v < 0) e.target.value = "";
+            }
+        });
+
+        // --- INGREDIENTES DINÁMICOS ---
+        const ingredientsList = document.getElementById('ingredients-list');
+        const btnAddIngredient = document.getElementById('btn-add-ingredient');
+
+        function renumberIngredients() {
+            const rows = ingredientsList.querySelectorAll('.ingredient-item');
+            rows.forEach((row, index) => {
+                row.querySelectorAll('input').forEach(input => {
+                    const oldName = input.getAttribute('name');
+                    if (!oldName) return;
+                    const newName = oldName.replace(/Input\.Ingredients\[\d+\]/, `Input.Ingredients[${index}]`);
+                    input.setAttribute('name', newName);
+                });
+            });
         }
+
+        btnAddIngredient.addEventListener('click', () => {
+            const first = ingredientsList.querySelector('.ingredient-item');
+            const clone = first.cloneNode(true);
+            clone.querySelectorAll('input').forEach(i => i.value = '');
+            ingredientsList.appendChild(clone);
+            renumberIngredients();
+        });
+
+        ingredientsList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-remove-ingredient')) {
+                const rows = ingredientsList.querySelectorAll('.ingredient-item');
+                if (rows.length > 1) {
+                    e.target.closest('.ingredient-item').remove();
+                    renumberIngredients();
+                } else {
+                    rows[0].querySelectorAll('input').forEach(i => i.value = '');
+                }
+            }
+        });
+
+        // --- PASOS DINÁMICOS ---
+        const stepsList = document.getElementById('steps');
+        const btnAddStep = document.getElementById('btn-add-step');
+
+                function renumberSteps() {
+            const rows = stepsList.querySelectorAll('.step-item');
+            rows.forEach((row, index) => {
+                row.querySelectorAll('input, textarea').forEach(input => {
+                    const oldName = input.getAttribute('name');
+                    if (!oldName) return;
+
+                    const newName = oldName.replace(/Input\.Steps\[\d+\]/, `Input.Steps[${index}]`);
+                    input.setAttribute('name', newName);
+
+                    // mantener el Order sincronizado con el índice
+                    if (newName.endsWith(".Order")) {
+                        input.value = index;
+                    }
+                });
+            });
+        }
+
+        btnAddStep.addEventListener('click', () => {
+            const first = stepsList.querySelector('.step-item');
+            if (!first) return;
+
+            const clone = first.cloneNode(true);
+
+            // quitar preview de imagen del clon
+            const preview = clone.querySelector('.step-preview');
+            if (preview) preview.remove();
+
+            clone.querySelectorAll('input, textarea').forEach(i => {
+                if (i.type === 'file') {
+                    i.value = null;          // archivo nuevo
+                } else if (i.name && i.name.endsWith(".ImageUrl")) {
+                    i.value = "";            // nueva imagen todavía no tiene url
+                } else if (i.name && i.name.endsWith(".Order")) {
+                    // valor provisional, luego renumberSteps() lo corrige igual
+                    i.value = stepsList.querySelectorAll('.step-item').length;
+                } else {
+                    i.value = "";            // descripción, etc.
+                }
+            });
+
+            stepsList.appendChild(clone);
+            renumberSteps();
+        });
+
+
+        stepsList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-remove-step')) {
+                const rows = stepsList.querySelectorAll('.step-item');
+                if (rows.length > 1) {
+                    e.target.closest('.step-item').remove();
+                    renumberSteps();
+                } else {
+                    rows[0].querySelectorAll('input, textarea').forEach(i => {
+                        if (i.type === 'file') i.value = null;
+                        else i.value = '';
+                    });
+                }
+            }
+        });
+
+        // --- VALIDACIÓN FINAL ---
+        const form = document.querySelector('form');
+        const titleInput = document.querySelector('input[name="Input.Title"]');
+
+        form.addEventListener('submit', (e) => {
+            document.querySelectorAll('input[type="text"]').forEach(cleanTextAndCapitalize);
+
+            if (titleInput && !titleInput.value.trim()) {
+                alert("El título no puede estar vacío.");
+                e.preventDefault();
+                return;
+            }
+
+            const calories = document.querySelector('input[name="Input.Calories"]');
+            const servings = document.querySelector('input[name="Input.Servings"]');
+
+            if (calories && (!calories.value || parseFloat(calories.value) <= 0)) {
+                alert("Las calorías deben ser mayores a 0.");
+                e.preventDefault();
+                return;
+            }
+
+            if (servings && (!servings.value || parseFloat(servings.value) <= 0)) {
+                alert("Las porciones deben ser mayores a 0.");
+                e.preventDefault();
+                return;
+            }
+        });
     </script>
 }

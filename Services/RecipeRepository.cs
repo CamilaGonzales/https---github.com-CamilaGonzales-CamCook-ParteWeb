@@ -1,10 +1,12 @@
-﻿using System;
+﻿using CamCook.Models;
+using Google.Cloud.Firestore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using CamCook.Services;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using CamCook.Models;
-using Google.Cloud.Firestore;
 
 namespace CamCook.Services
 {
@@ -14,118 +16,222 @@ namespace CamCook.Services
         private readonly IImageStorage _imgStore;
         private const string Col = "recetas";
 
+        private static readonly Regex _multiSpaces = new(@"\s{2,}", RegexOptions.Compiled);
+
+        private static string CleanSpaces(string? input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return string.Empty;
+
+            var s = input.Trim();
+            s = _multiSpaces.Replace(s, " ");
+            return s;
+        }
+
+        private static string CleanLabel(string? input)
+        {
+            var s = CleanSpaces(input);
+            if (string.IsNullOrEmpty(s))
+                return s;
+
+            return char.ToUpper(s[0]) + (s.Length > 1 ? s.Substring(1) : string.Empty);
+        }
+
+        private const int MaxIngredientNameLength = 80;
+        private static string CleanIngredientName(string? input)
+        {
+            var s = CleanLabel(input);
+            if (string.IsNullOrEmpty(s)) return s;
+            return s.Length > MaxIngredientNameLength ? s.Substring(0, MaxIngredientNameLength) : s;
+        }
+
+        private const int MaxIngredientUnitLength = 20;
+        private static string CleanIngredientUnit(string? input)
+        {
+            var s = CleanLabel(input);
+            if (string.IsNullOrEmpty(s)) return s;
+            return s.Length > MaxIngredientUnitLength ? s.Substring(0, MaxIngredientUnitLength) : s;
+        }
+
+        private static string CleanQuantity(string? input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return string.Empty;
+
+            var trimmed = input.Trim();
+            var filteredChars = trimmed.Where(c =>
+                char.IsDigit(c) || c == ' ' || c == '/' || c == '.' || c == ',');
+
+            var filtered = new string(filteredChars.ToArray());
+            filtered = _multiSpaces.Replace(filtered, " ");
+            return filtered;
+        }
+
         public RecipeRepository(FirestoreDb db, IImageStorage imgStore)
         {
             _db = db;
             _imgStore = imgStore;
         }
 
-        /// <summary>
-        /// Crea una receta a partir del formulario y devuelve el Id del documento en Firestore.
-        /// Guarda claves en español y camelCase para compatibilidad.
-        /// </summary>
+        // === CREATE ===
         public async Task<string> CreateAsync(RecipeInput input, CancellationToken ct = default)
         {
-            // 1) Subir imagen principal
-            string? mainUrl = null;
-            if (input.MainImage != null && input.MainImage.Length > 0)
-                mainUrl = await _imgStore.SaveAsync(input.MainImage, ct);
-
-            // 2) Subir imágenes de pasos
-            var stepsCamel = new List<Dictionary<string, object?>>();
-            var pasosEs = new List<Dictionary<string, object?>>();
-
-            if (input.Steps != null)
+            try
             {
-                for (int i = 0; i < input.Steps.Count; i++)
+                string? mainUrl = null;
+
+                // Subida segura de imagen principal
+                if (input.MainImage != null && input.MainImage.Length > 0)
                 {
-                    var s = input.Steps[i];
-                    string? stepUrl = null;
-
-                    if (s.Image != null && s.Image.Length > 0)
-                        stepUrl = await _imgStore.SaveAsync(s.Image, ct);
-
-                    // camelCase
-                    stepsCamel.Add(new Dictionary<string, object?>
+                    try
                     {
-                        ["index"] = i, // 0..N-1
-                        ["description"] = s.Description?.Trim(),
-                        ["imageUrl"] = stepUrl
-                    });
-
-                    // español
-                    pasosEs.Add(new Dictionary<string, object?>
+                        mainUrl = await _imgStore.SaveAsync(input.MainImage, ct);
+                    }
+                    catch (Exception imgEx)
                     {
-                        ["orden"] = i, // si prefieres 1..N, usa i+1
-                        ["descripcion"] = s.Description?.Trim(),
-                        ["imagenUrl"] = stepUrl
-                    });
+                        Console.WriteLine("ERROR al subir imagen principal: " + imgEx);
+                        mainUrl = null; // seguimos sin romper la página
+                    }
                 }
+
+                // Pasos
+                var pasosEs = new List<Dictionary<string, object?>>();
+                if (input.Steps != null)
+                {
+                    for (int i = 0; i < input.Steps.Count; i++)
+                    {
+                        var s = input.Steps[i];
+                        string? stepUrl = s.ImageUrl;
+
+                        if (s.Image != null && s.Image.Length > 0)
+                        {
+                            try
+                            {
+                                stepUrl = await _imgStore.SaveAsync(s.Image, ct);
+                            }
+                            catch (Exception stepImgEx)
+                            {
+                                Console.WriteLine($"ERROR al subir imagen del paso {i + 1}: {stepImgEx}");
+                                stepUrl = null; // seguimos sin romper la página
+                            }
+                        }
+
+                        pasosEs.Add(new Dictionary<string, object?>
+                        {
+                            ["orden"] = i,
+                            ["descripcion"] = s.Description?.Trim(),
+                            ["imagenUrl"] = stepUrl
+                        });
+                    }
+                }
+
+                // Ingredientes
+                var ingredientesEs = input.Ingredients?.Select(i => new Dictionary<string, object?>
+                {
+                    ["nombre"] = i.Name,
+                    ["cantidad"] = i.Quantity,
+                    ["unidad"] = i.Unit
+                }).ToList();
+
+                // ===================== IA: Analizar contenido =====================
+
+                // Texto de ingredientes (solo nombres)
+                var ingredientesTexto = string.Join(" ",
+                    (input.Ingredients ?? new List<IngredientInput>())
+                        .Select(i => i.Name ?? string.Empty));
+
+                // Texto de pasos (descripciones)
+                var pasosTexto = string.Join(" ",
+                    (input.Steps ?? new List<StepInput>())
+                        .Select(s => s.Description ?? string.Empty));
+
+                // Texto combinado para la IA
+                var descripcionCompuesta = $"{input.Title} {ingredientesTexto} {pasosTexto}".Trim();
+
+                // ¿Tiene alguna imagen?
+                bool tieneImagen =
+                    (mainUrl != null) ||
+                    (input.Steps?.Any(s => s.Image != null || !string.IsNullOrWhiteSpace(s.ImageUrl)) ?? false);
+
+                // Llamamos al analizador IA
+                var ai = AnalizadorIA.Analizar(
+                    input.Title ?? string.Empty,
+                    descripcionCompuesta,
+                    input.Ingredients?.Count ?? 0,
+                    tieneImagen
+                );
+
+                // Bloque que se guardará en "ai"
+                var aiDict = new Dictionary<string, object?>
+                {
+                    ["score"] = ai.Score,
+                    ["flags"] = new Dictionary<string, object?>
+                    {
+                        ["verdict"] = ai.Verdict.ToString().ToLowerInvariant(), // "ok", "review", "reject"
+                        ["flags"] = ai.Flags,                                   // lista de mensajes
+                        ["reason"] = string.Join("; ", ai.Flags)                // opcional: todo junto
+                    }
+                };
+
+                // Estado según veredicto de la IA
+                string estado = ai.Verdict switch
+                {
+                    AiVerdict.Ok => "pendiente_admin",   // pasa a moderación humana
+                    AiVerdict.Review => "revisar",       // IA tiene dudas
+                    AiVerdict.Reject => "rechazada_ai",  // IA la rechaza directamente
+                    _ => "pendiente_admin"
+                };
+
+                // Descripción "plana" para la moderación (solo texto)
+                var descripcionPlano = string.Join("\n",
+                    pasosEs.Select(p => p["descripcion"]?.ToString() ?? string.Empty));
+
+                var nowTs = Timestamp.GetCurrentTimestamp();
+
+                var docData = new Dictionary<string, object?>
+                {
+                    ["titulo"] = input.Title?.Trim(),
+                    ["calorias"] = input.Calories,
+                    ["porciones"] = input.Servings,
+                    ["tiempoPrep"] = input.PrepTimeText,
+                    ["imagenUrl"] = mainUrl,
+
+                    // Autor (doble: authorUid y autorUid para compatibilidad)
+                    ["authorUid"] = input.AuthorUid,
+                    ["authorName"] = input.AuthorName,
+                    ["authorEmail"] = input.AuthorEmail,
+                    ["autorUid"] = input.AuthorUid,
+                    ["autorEmail"] = input.AuthorEmail,
+
+                    // Contenido
+                    ["ingredientes"] = ingredientesEs ?? new List<Dictionary<string, object?>>(),
+                    ["pasos"] = pasosEs ?? new List<Dictionary<string, object?>>(),
+                    ["descripcion"] = descripcionPlano,  // usado en la vista de moderación
+
+                    // IA y estado
+                    ["ai"] = aiDict,
+                    ["estado"] = estado,
+                    ["publicada"] = false,
+
+                    // Timestamps
+                    ["creadoEn"] = nowTs,
+                    ["actualizadoEn"] = nowTs
+                };
+
+                // Guardar en Firestore
+                var added = await _db.Collection(Col).AddAsync(docData, ct);
+                return added.Id;
             }
-
-            // 3) Ingredientes (dos variantes)
-            var ingredientsCamel = input.Ingredients?.Select(i => new Dictionary<string, object?>
+            catch (Exception ex)
             {
-                ["name"] = i.Name,
-                ["quantity"] = i.Quantity,
-                ["unit"] = i.Unit
-            }).ToList();
-
-            var ingredientesEs = input.Ingredients?.Select(i => new Dictionary<string, object?>
-            {
-                ["nombre"] = i.Name,
-                ["cantidad"] = i.Quantity,
-                ["unidad"] = i.Unit
-            }).ToList();
-
-            var title = input.Title?.Trim();
-            var nowTs = Timestamp.GetCurrentTimestamp();
-
-            // 4) Documento (ES + camelCase)
-            var docData = new Dictionary<string, object?>
-            {
-                // Título
-                ["title"] = title,
-                ["titulo"] = title,
-
-                // Calorías / Porciones
-                ["calories"] = input.Calories,
-                ["calorias"] = input.Calories,
-                ["servings"] = input.Servings,
-                ["porciones"] = input.Servings,
-
-                // Tiempo de preparación
-                ["prepTimeText"] = input.PrepTimeText,
-                ["tiempoPrep"] = input.PrepTimeText,
-
-                // Imagen principal
-                ["mainImageUrl"] = mainUrl,
-                ["imagenUrl"] = mainUrl,
-
-                // Ingredientes / Pasos
-                ["ingredients"] = ingredientsCamel,
-                ["ingredientes"] = ingredientesEs,
-                ["steps"] = stepsCamel,
-                ["pasos"] = pasosEs,
-
-                // Autoría
-                ["authorUid"] = input.AuthorUid,
-                ["authorEmail"] = input.AuthorEmail,
-
-                // Estado / publicación
-                ["estado"] = "pendiente_admin",
-                ["publicada"] = false,
-
-                // Tiempos
-                ["creadoEn"] = nowTs,
-                ["actualizadoEn"] = nowTs
-            };
-
-            var added = await _db.Collection(Col).AddAsync(docData, ct);
-            return added.Id;
+                Console.WriteLine("ERROR en CreateAsync: " + ex);
+                throw new Exception("Ocurrió un error al crear la receta. Revisa los logs para más detalles.", ex);
+            }
         }
 
-        // READ ALL
+
+
+        // === READ ALL ===
         public async Task<List<Recipe>> GetAllAsync(CancellationToken ct = default)
         {
             var snapshot = await _db.Collection(Col)
@@ -142,7 +248,7 @@ namespace CamCook.Services
                 .ToList();
         }
 
-        // READ ONE
+        // === READ ONE ===
         public async Task<Recipe?> GetByIdAsync(string id, CancellationToken ct = default)
         {
             var doc = await _db.Collection(Col).Document(id).GetSnapshotAsync(ct);
@@ -153,74 +259,77 @@ namespace CamCook.Services
             return recipe;
         }
 
-        // UPDATE
+        // === UPDATE ===
         public async Task UpdateAsync(string id, RecipeInput input, string currentUserUid, CancellationToken ct = default)
         {
             var docRef = _db.Collection(Col).Document(id);
             var doc = await docRef.GetSnapshotAsync(ct);
-            if (!doc.Exists) throw new Exception("Receta no encontrada");
+            if (!doc.Exists)
+                throw new Exception("Receta no encontrada");
 
-            var authorUid = doc.GetValue<string>("authorUid");
+            // --- Resolver authorUid ---
+            string? authorUid = null;
+
+            if (doc.TryGetValue("authorUid", out string authorUidEn) && !string.IsNullOrWhiteSpace(authorUidEn))
+                authorUid = authorUidEn;
+            else if (doc.TryGetValue("autorUid", out string authorUidEs) && !string.IsNullOrWhiteSpace(authorUidEs))
+                authorUid = authorUidEs;
+            else if (doc.TryGetValue("authorEmail", out string _))
+                authorUid = currentUserUid; // fallback para recetas viejas
+            else
+                throw new Exception("El documento no tiene authorUid/autorUid.");
+
             if (authorUid != currentUserUid)
                 throw new UnauthorizedAccessException("No tienes permiso para editar esta receta");
 
-            // MAIN IMAGE: si hay nueva, subir; si no, conservar la existente
+            // --- Imagen principal ---
             string? mainUrl = null;
-            if (input.MainImage != null && input.MainImage.Length > 0)
+            try
             {
-                mainUrl = await _imgStore.SaveAsync(input.MainImage, ct);
+                if (input.MainImage != null && input.MainImage.Length > 0)
+                    mainUrl = await _imgStore.SaveAsync(input.MainImage, ct);
+                else
+                {
+                    if (doc.TryGetValue("imagenUrl", out string existingEs) && !string.IsNullOrWhiteSpace(existingEs))
+                        mainUrl = existingEs;
+                    else if (doc.TryGetValue("mainImageUrl", out string existingCamel) && !string.IsNullOrWhiteSpace(existingCamel))
+                        mainUrl = existingCamel;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                // conservar actual del documento
-                if (doc.TryGetValue("imagenUrl", out string existingEs) && !string.IsNullOrWhiteSpace(existingEs))
-                    mainUrl = existingEs;
-                else if (doc.TryGetValue("mainImageUrl", out string existingCamel) && !string.IsNullOrWhiteSpace(existingCamel))
-                    mainUrl = existingCamel;
+                throw new Exception("Error al subir la imagen principal: " + ex.Message, ex);
             }
 
-            // PASOS: si sube nueva imagen, reemplaza; si no, conserva input.ImageUrl
-            var stepsCamel = new List<Dictionary<string, object?>>();
+            // --- Pasos ---
             var pasosEs = new List<Dictionary<string, object?>>();
-
             if (input.Steps != null)
             {
                 for (int i = 0; i < input.Steps.Count; i++)
                 {
                     var s = input.Steps[i];
-                    string? stepUrl = s.ImageUrl; // conservar por defecto
+                    string? stepUrl = s.ImageUrl;
 
-                    if (s.Image != null && s.Image.Length > 0)
-                        stepUrl = await _imgStore.SaveAsync(s.Image, ct);
-
-                    var order = s.Order; // viene del formulario (o 0..N-1)
-
-                    // camel
-                    stepsCamel.Add(new Dictionary<string, object?>
+                    try
                     {
-                        ["index"] = order,
-                        ["description"] = s.Description?.Trim(),
-                        ["imageUrl"] = stepUrl
-                    });
+                        if (s.Image != null && s.Image.Length > 0)
+                            stepUrl = await _imgStore.SaveAsync(s.Image, ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception($"Error al subir imagen del paso {i + 1}: {ex.Message}", ex);
+                    }
 
-                    // español
                     pasosEs.Add(new Dictionary<string, object?>
                     {
-                        ["orden"] = order,
+                        ["orden"] = s.Order,
                         ["descripcion"] = s.Description?.Trim(),
                         ["imagenUrl"] = stepUrl
                     });
                 }
             }
 
-            // INGREDIENTES (dos variantes)
-            var ingredientsCamel = input.Ingredients?.Select(i => new Dictionary<string, object?>
-            {
-                ["name"] = i.Name,
-                ["quantity"] = i.Quantity,
-                ["unit"] = i.Unit
-            }).ToList();
-
+            // --- Ingredientes ---
             var ingredientesEs = input.Ingredients?.Select(i => new Dictionary<string, object?>
             {
                 ["nombre"] = i.Name,
@@ -228,40 +337,52 @@ namespace CamCook.Services
                 ["unidad"] = i.Unit
             }).ToList();
 
+            var nowTs = Timestamp.FromDateTime(DateTime.UtcNow);
+
             var updateData = new Dictionary<string, object?>
             {
-                ["title"] = input.Title,
                 ["titulo"] = input.Title,
-
-                ["calories"] = input.Calories,
                 ["calorias"] = input.Calories,
-                ["servings"] = input.Servings,
                 ["porciones"] = input.Servings,
-
-                ["prepTimeText"] = input.PrepTimeText,
                 ["tiempoPrep"] = input.PrepTimeText,
-
-                ["mainImageUrl"] = mainUrl,
                 ["imagenUrl"] = mainUrl,
-
-                ["ingredients"] = ingredientsCamel,
-                ["ingredientes"] = ingredientesEs,
-                ["steps"] = stepsCamel,
-                ["pasos"] = pasosEs,
-
-                // RE-ENVÍO A REVISIÓN
-                ["estado"] = "revisar",
+                ["ingredientes"] = ingredientesEs ?? new(),
+                ["pasos"] = pasosEs ?? new(),
+                ["estado"] = "pendiente_admin",
                 ["publicada"] = false,
-                ["actualizadoEn"] = Timestamp.GetCurrentTimestamp(),
-                ["publicadoEn"] = FieldValue.Delete // elimina fecha de publicación si existía
+                ["publicadoEn"] = FieldValue.Delete,
+                ["actualizadoEn"] = nowTs,
+                ["ai"] = new Dictionary<string, object?>
+                {
+                    ["status"] = "pending",
+                    ["requestedAt"] = nowTs,
+                    ["version"] = FieldValue.Increment(1),
+                    ["flags"] = new Dictionary<string, object?>()
+                },
+                ["needsModeration"] = true
             };
 
             await docRef.UpdateAsync(updateData, cancellationToken: ct);
+
+            // --- Limpieza de autorUid vieja (segura) ---
+            try
+            {
+                if (doc.ContainsField("autorUid"))
+                {
+                    await docRef.UpdateAsync(new Dictionary<string, object?>
+                    {
+                        ["authorUid"] = authorUid,
+                        ["autorUid"] = FieldValue.Delete
+                    }, cancellationToken: ct);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Advertencia: no se pudo limpiar autorUid. " + ex.Message);
+            }
         }
 
-
-
-        // DELETE
+        // === DELETE ===
         public async Task DeleteAsync(string id, string currentUserUid, CancellationToken ct = default)
         {
             var docRef = _db.Collection(Col).Document(id);
@@ -276,7 +397,5 @@ namespace CamCook.Services
 
             await docRef.DeleteAsync(cancellationToken: ct);
         }
-
-
     }
 }

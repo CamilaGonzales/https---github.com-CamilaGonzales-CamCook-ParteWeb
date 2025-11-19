@@ -1,0 +1,74 @@
+﻿@page
+@model CamCook.Pages.Admin.Recipes.PreviewModel
+@{
+    ViewData["Title"] = "Vista completa de receta";
+}
+
+<a asp-page="/Admin/Moderacion/Index" class="btn btn-link">← Volver a moderación</a>
+
+<div class="card shadow-sm">
+    @if (!string.IsNullOrWhiteSpace(Model.ImagenUrl))
+    {
+        <img src="@Model.ImagenUrl" class="card-img-top" alt="@Model.Titulo"
+             style="max-height:360px;object-fit:cover;">
+    }
+
+    <div class="card-body">
+        <h2 class="card-title mb-2">@Model.Titulo</h2>
+
+        <div class="mb-2 text-muted">
+            @if (!string.IsNullOrWhiteSpace(Model.AutorEmail))
+            {
+                <span>Autor: @Model.AutorEmail · </span>
+            }
+            <span>Estado: <strong>@Model.Estado</strong></span>
+            @if (!string.IsNullOrWhiteSpace(Model.MotivoRechazo))
+            {
+                <div class="alert alert-warning mt-2">
+                    <strong>Motivo de rechazo:</strong> @Model.MotivoRechazo
+                </div>
+            }
+        </div>
+
+        <ul class="list-inline text-muted">
+            @if (Model.Calories.HasValue)
+            {
+                <li class="list-inline-item">🔥 @Model.Calories kcal</li>
+            }
+            @if (Model.Servings.HasValue)
+            {
+                <li class="list-inline-item">🍽️ @Model.Servings porciones</li>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.PrepTimeText))
+            {
+                <li class="list-inline-item">⏱️ @Model.PrepTimeText</li>
+            }
+        </ul>
+
+        @if (Model.Tags?.Any() == true)
+        {
+            <div class="mb-3">
+                @foreach (var tag in Model.Tags)
+                {
+                    <span class="badge bg-secondary me-1">@tag</span>
+                }
+            </div>
+        }
+
+        <h5>Ingredientes</h5>
+        <ul>
+            @foreach (var ing in Model.Ingredientes)
+            {
+                <li>@ing</li>
+            }
+        </ul>
+
+        <h5 class="mt-3">Pasos</h5>
+        <ol>
+            @foreach (var paso in Model.Pasos)
+            {
+                <li>@paso</li>
+            }
+        </ol>
+    </div>
+</div>

@@ -16,12 +16,11 @@ namespace CamCook.Pages.Admin.Recipes
             Pendientes = await _svc.ObtenerPendientesAsync();
         }
 
-        public async Task OnPostAprobarAsync(string id)
+        public async Task OnPostAprobarAsync(string id, string? autorUid)
         {
-            await _svc.AprobarRecetaAsync(id);
+            await _svc.AprobarRecetaAsync(id, autorUid);
             Response.Redirect(Request.Path);
         }
-
 
         public async Task OnPostRechazarAsync(string id, string motivo)
         {
