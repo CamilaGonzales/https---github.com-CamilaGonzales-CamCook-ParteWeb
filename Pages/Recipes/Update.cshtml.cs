@@ -65,19 +65,38 @@ namespace CamCook.Pages.Recipes
             return Page();
         }
 
+        // ================== HANDLERS POST ==================
+
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> OnPostAsync(CancellationToken ct)
+        public async Task<IActionResult> OnPostGuardarAsync(CancellationToken ct)
+        {
+            // Guardar como borrador
+            return await ActualizarRecetaInternoAsync(ct, esBorrador: true);
+        }
+
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> OnPostEnviarAsync(CancellationToken ct)
+        {
+            // Mandar a revisar
+            return await ActualizarRecetaInternoAsync(ct, esBorrador: false);
+        }
+
+        // ================== LÓGICA COMPARTIDA ==================
+
+        private async Task<IActionResult> ActualizarRecetaInternoAsync(CancellationToken ct, bool esBorrador)
         {
             if (!(User?.Identity?.IsAuthenticated ?? false))
                 return RedirectToPage("/Account/Login");
 
-            if (!ModelState.IsValid)
+            // Para borrador dejamos pasar aunque el modelo no sea perfecto
+            if (!ModelState.IsValid && !esBorrador)
             {
                 // Recuperar la imagen actual para volver a mostrarla
                 var receta = await _repo.GetByIdAsync(Id, ct);
                 ExistingMainImageUrl = receta?.ImageUrl;
                 return Page();
             }
+
             try
             {
                 var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -90,20 +109,28 @@ namespace CamCook.Pages.Recipes
                     return Page();
                 }
 
-                // Validación de imágenes vacías
+                // Validación ligera de imágenes: si no se sube nueva, se conserva la existente (ImageUrl)
                 foreach (var step in Input.Steps)
                 {
                     if (step.Image == null || step.Image.Length == 0)
                     {
-                        // No se subió nueva imagen, mantener la existente
+                        // No se subió nueva imagen, se mantiene la URL que venga en ImageUrl
                         continue;
                     }
                 }
 
+                if (esBorrador)
+                {
+                    // ?? Necesita que tengas implementado IRecipeRepository.UpdateDraftAsync
+                    await _repo.UpdateDraftAsync(Id, Input, uid, ct);
+                    TempData["ok"] = "Cambios guardados como borrador. Puedes enviarlos a revisión cuando quieras.";
+                }
+                else
+                {
+                    await _repo.UpdateAsync(Id, Input, uid, ct);
+                    TempData["ok"] = "Cambios enviados a revisión. Te avisaremos cuando se publique.";
+                }
 
-                await _repo.UpdateAsync(Id, Input, uid, ct);
-
-                TempData["ok"] = "Cambios enviados a revisión. Te avisaremos cuando se publique.";
                 return RedirectToPage("/Recipes/List");
             }
             catch (OperationCanceledException)

@@ -113,12 +113,25 @@
     </button>
 
     <hr />
-    <button type="submit" class="btn btn-primary">Mandar a revisar</button>
+    <button type="submit"
+            class="btn btn-secondary me-2"
+            asp-page-handler="Guardar"
+            id="btn-guardar">
+        Guardar
+    </button>
+
+    <button type="submit"
+            class="btn btn-primary"
+            asp-page-handler="Enviar"
+            id="btn-enviar">
+        Mandar a revisar
+    </button>
+
 </form>
 
 @section Scripts {
-<script>
-            // ==========================================================
+    <script>
+        // ==========================================================
         // 🔹 FUNCIÓN PRINCIPAL: limpiar texto y capitalizar
         // ==========================================================
         function cleanTextAndCapitalize(input) {
@@ -185,140 +198,176 @@
             }
         });
 
-
-
-
-    // ==========================================================
-    // 🔹 EVITAR NÚMEROS NEGATIVOS
-    // ==========================================================
-    document.addEventListener("input", e => {
-        if (e.target.type === "number") {
-            const v = parseFloat(e.target.value);
-            if (isNaN(v) || v < 0) e.target.value = "";
-        }
-    });
-
-    // ==========================================================
-    // 🔹 INGREDIENTES DINÁMICOS
-    // ==========================================================
-    const ingredientsList = document.getElementById('ingredients-list');
-    const btnAddIngredient = document.getElementById('btn-add-ingredient');
-
-    function renumberIngredients() {
-        const rows = ingredientsList.querySelectorAll('.ingredient-item');
-        rows.forEach((row, index) => {
-            row.querySelectorAll('input').forEach(input => {
-                const oldName = input.getAttribute('name');
-                if (!oldName) return;
-                const newName = oldName.replace(/Input\.Ingredients\[\d+\]/, `Input.Ingredients[${index}]`);
-                input.setAttribute('name', newName);
-            });
+        // ==========================================================
+        // 🔹 EVITAR NÚMEROS NEGATIVOS
+        // ==========================================================
+        document.addEventListener("input", e => {
+            if (e.target.type === "number") {
+                const v = parseFloat(e.target.value);
+                if (isNaN(v) || v < 0) e.target.value = "";
+            }
         });
-    }
 
-    btnAddIngredient.addEventListener('click', () => {
-        const first = ingredientsList.querySelector('.ingredient-item');
-        const clone = first.cloneNode(true);
+        // ==========================================================
+        // 🔹 INGREDIENTES DINÁMICOS
+        // ==========================================================
+        const ingredientsList = document.getElementById('ingredients-list');
+        const btnAddIngredient = document.getElementById('btn-add-ingredient');
 
-        // Limpiar campos
-        clone.querySelectorAll('input').forEach(i => i.value = '');
-
-        ingredientsList.appendChild(clone);
-        renumberIngredients();
-    });
-
-    ingredientsList.addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn-remove-ingredient')) {
+        function renumberIngredients() {
             const rows = ingredientsList.querySelectorAll('.ingredient-item');
-            if (rows.length > 1) {
-                e.target.closest('.ingredient-item').remove();
-                renumberIngredients();
-            } else {
-                rows[0].querySelectorAll('input').forEach(i => i.value = '');
-            }
-        }
-    });
-
-    // ==========================================================
-    // 🔹 PASOS DINÁMICOS
-    // ==========================================================
-    const stepsList = document.getElementById('steps');
-    const btnAddStep = document.getElementById('btn-add-step');
-
-    function renumberSteps() {
-        const rows = stepsList.querySelectorAll('.step-item');
-        rows.forEach((row, index) => {
-            row.querySelectorAll('input').forEach(input => {
-                const oldName = input.getAttribute('name');
-                if (!oldName) return;
-                const newName = oldName.replace(/Input\.Steps\[\d+\]/, `Input.Steps[${index}]`);
-                input.setAttribute('name', newName);
-            });
-        });
-    }
-
-    btnAddStep.addEventListener('click', () => {
-        const first = stepsList.querySelector('.step-item');
-        const clone = first.cloneNode(true);
-
-        clone.querySelectorAll('input').forEach(i => {
-            if (i.type === 'file') i.value = null;
-            else i.value = '';
-        });
-
-        stepsList.appendChild(clone);
-        renumberSteps();
-    });
-
-    stepsList.addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn-remove-step')) {
-            const rows = stepsList.querySelectorAll('.step-item');
-            if (rows.length > 1) {
-                e.target.closest('.step-item').remove();
-                renumberSteps();
-            } else {
-                rows[0].querySelectorAll('input').forEach(i => {
-                    if (i.type === 'file') i.value = null;
-                    else i.value = '';
+            rows.forEach((row, index) => {
+                row.querySelectorAll('input').forEach(input => {
+                    const oldName = input.getAttribute('name');
+                    if (!oldName) return;
+                    const newName = oldName.replace(/Input\.Ingredients\[\d+\]/, `Input.Ingredients[${index}]`);
+                    input.setAttribute('name', newName);
                 });
+            });
+        }
+
+        btnAddIngredient.addEventListener('click', () => {
+            const first = ingredientsList.querySelector('.ingredient-item');
+            const clone = first.cloneNode(true);
+
+            // Limpiar campos
+            clone.querySelectorAll('input').forEach(i => i.value = '');
+
+            ingredientsList.appendChild(clone);
+            renumberIngredients();
+        });
+
+        ingredientsList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-remove-ingredient')) {
+                const rows = ingredientsList.querySelectorAll('.ingredient-item');
+                if (rows.length > 1) {
+                    e.target.closest('.ingredient-item').remove();
+                    renumberIngredients();
+                } else {
+                    rows[0].querySelectorAll('input').forEach(i => i.value = '');
+                }
             }
-        }
-    });
+        });
 
-    // ==========================================================
-    // 🔹 VALIDACIÓN FINAL ANTES DE ENVIAR
-    // ==========================================================
-    const form = document.querySelector('form');
-    const titleInput = document.querySelector('input[name="Input.Title"]');
+        // ==========================================================
+        // 🔹 PASOS DINÁMICOS
+        // ==========================================================
+        const stepsList = document.getElementById('steps');
+        const btnAddStep = document.getElementById('btn-add-step');
 
-    form.addEventListener('submit', (e) => {
-        // Limpiar y capitalizar todos los textos antes de enviar
-        document.querySelectorAll('input[type="text"]').forEach(cleanTextAndCapitalize);
-
-        // Validar título
-        if (titleInput && !titleInput.value.trim()) {
-            alert("El título no puede estar vacío.");
-            e.preventDefault();
-            return;
-        }
-
-        // Validar calorías y porciones > 0
-        const calories = document.querySelector('input[name="Input.Calories"]');
-        const servings = document.querySelector('input[name="Input.Servings"]');
-
-        if (calories && (!calories.value || parseFloat(calories.value) <= 0)) {
-            alert("Las calorías deben ser mayores a 0.");
-            e.preventDefault();
-            return;
+        function renumberSteps() {
+            const rows = stepsList.querySelectorAll('.step-item');
+            rows.forEach((row, index) => {
+                row.querySelectorAll('input').forEach(input => {
+                    const oldName = input.getAttribute('name');
+                    if (!oldName) return;
+                    const newName = oldName.replace(/Input\.Steps\[\d+\]/, `Input.Steps[${index}]`);
+                    input.setAttribute('name', newName);
+                });
+            });
         }
 
-        if (servings && (!servings.value || parseFloat(servings.value) <= 0)) {
-            alert("Las porciones deben ser mayores a 0.");
-            e.preventDefault();
-            return;
+        btnAddStep.addEventListener('click', () => {
+            const first = stepsList.querySelector('.step-item');
+            const clone = first.cloneNode(true);
+
+            clone.querySelectorAll('input').forEach(i => {
+                if (i.type === 'file') i.value = null;
+                else i.value = '';
+            });
+
+            stepsList.appendChild(clone);
+            renumberSteps();
+        });
+
+        stepsList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-remove-step')) {
+                const rows = stepsList.querySelectorAll('.step-item');
+                if (rows.length > 1) {
+                    e.target.closest('.step-item').remove();
+                    renumberSteps();
+                } else {
+                    rows[0].querySelectorAll('input').forEach(i => {
+                        if (i.type === 'file') i.value = null;
+                        else i.value = '';
+                    });
+                }
+            }
+        });
+
+        // ==========================================================
+        // 🔹 MODO DE ENVÍO (borrador vs enviar)
+        // ==========================================================
+        let submitMode = "enviar"; // por defecto
+
+        const btnGuardar = document.getElementById('btn-guardar');
+        const btnEnviar  = document.getElementById('btn-enviar');
+
+        // Cuando se hace clic en GUARDAR: quitar required y marcar modo borrador
+        if (btnGuardar) {
+            btnGuardar.addEventListener('click', () => {
+                submitMode = "borrador";
+
+                document.querySelectorAll('form [required]').forEach(el => {
+                    el.dataset.wasRequired = "true";
+                    el.removeAttribute('required');
+                });
+            });
         }
 
-        // Si todo está bien, los datos ya están limpios y listos para Firebase
-    });
-</script>
+        // Cuando se hace clic en MANDAR A REVISAR: restaurar required y modo enviar
+        if (btnEnviar) {
+            btnEnviar.addEventListener('click', () => {
+                submitMode = "enviar";
+
+                document.querySelectorAll('form [data-was-required="true"]').forEach(el => {
+                    el.setAttribute('required', 'required');
+                });
+            });
+        }
+
+        // ==========================================================
+        // 🔹 VALIDACIÓN FINAL ANTES DE ENVIAR
+        // ==========================================================
+        const form = document.querySelector('form');
+        const titleInput = document.querySelector('input[name="Input.Title"]');
+
+        form.addEventListener('submit', (e) => {
+
+            // Si es borrador, no hacemos validaciones fuertes
+            if (submitMode === "borrador") {
+                // si quieres, solo limpiamos textos:
+                document.querySelectorAll('input[type="text"]').forEach(cleanTextAndCapitalize);
+                return; // dejamos que el formulario se envíe
+            }
+
+            // 🔽 De aquí para abajo es tu validación original
+            document.querySelectorAll('input[type="text"]').forEach(cleanTextAndCapitalize);
+
+            // Validar título
+            if (titleInput && !titleInput.value.trim()) {
+                alert("El título no puede estar vacío.");
+                e.preventDefault();
+                return;
+            }
+
+            // Validar calorías y porciones > 0
+            const calories = document.querySelector('input[name="Input.Calories"]');
+            const servings = document.querySelector('input[name="Input.Servings"]');
+
+            if (calories && (!calories.value || parseFloat(calories.value) <= 0)) {
+                alert("Las calorías deben ser mayores a 0.");
+                e.preventDefault();
+                return;
+            }
+
+            if (servings && (!servings.value || parseFloat(servings.value) <= 0)) {
+                alert("Las porciones deben ser mayores a 0.");
+                e.preventDefault();
+                return;
+            }
+
+            // Si todo está bien, los datos ya están limpios y listos para Firebase
+        });
+    </script>
 }

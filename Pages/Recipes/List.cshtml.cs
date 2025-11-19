@@ -1,6 +1,7 @@
 using CamCook.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Security.Claims;
 using System.Threading;
 
 
@@ -16,7 +17,10 @@ public class ListModel : PageModel
 
     public async Task OnGetAsync()
     {
+        string? uid = User?.FindFirstValue(ClaimTypes.NameIdentifier)
+                     ?? User?.FindFirstValue("uid");
         Recetas = await _svc.ObtenerPublicadasAsync();
+        Recetas = await _svc.ObtenerPublicadasYBorradoresAsync(uid);
     }
 
 }

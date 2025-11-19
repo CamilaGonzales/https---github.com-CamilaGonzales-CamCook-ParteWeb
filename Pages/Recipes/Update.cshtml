@@ -111,7 +111,7 @@
                 </div>
 
                 <div class="col-md-3">
-                    @* CONTENEDOR DEL PREVIEW *@
+                    @* PREVIEW DE LA IMAGEN DEL PASO *@
                     @if (!string.IsNullOrWhiteSpace(Model.Input.Steps[i].ImageUrl))
                     {
                         <div class="mb-1 step-preview">
@@ -141,14 +141,27 @@
         }
     </div>
 
-
+    <!-- ⬇⬇ ESTE ES EL BOTÓN QUE NO QUEREMOS PERDER 😅 -->
     <button type="button" id="btn-add-step" class="btn btn-secondary mt-1">
         + Agregar paso
     </button>
 
     <hr />
-    <button type="submit" class="btn btn-primary">Mandar a revisar</button>
-    <a asp-page="/Recipes/List" class="btn btn-secondary">Cancelar</a>
+    <button type="submit"
+            class="btn btn-secondary me-2"
+            asp-page-handler="Guardar"
+            id="btn-guardar">
+        Guardar
+    </button>
+
+    <button type="submit"
+            class="btn btn-primary"
+            asp-page-handler="Enviar"
+            id="btn-enviar">
+        Mandar a revisar
+    </button>
+
+    <a asp-page="/Recipes/List" class="btn btn-secondary ms-2">Cancelar</a>
 </form>
 
 @section Scripts {
@@ -250,7 +263,7 @@
         const stepsList = document.getElementById('steps');
         const btnAddStep = document.getElementById('btn-add-step');
 
-                function renumberSteps() {
+        function renumberSteps() {
             const rows = stepsList.querySelectorAll('.step-item');
             rows.forEach((row, index) => {
                 row.querySelectorAll('input, textarea').forEach(input => {
@@ -260,7 +273,6 @@
                     const newName = oldName.replace(/Input\.Steps\[\d+\]/, `Input.Steps[${index}]`);
                     input.setAttribute('name', newName);
 
-                    // mantener el Order sincronizado con el índice
                     if (newName.endsWith(".Order")) {
                         input.value = index;
                     }
@@ -274,27 +286,24 @@
 
             const clone = first.cloneNode(true);
 
-            // quitar preview de imagen del clon
             const preview = clone.querySelector('.step-preview');
             if (preview) preview.remove();
 
             clone.querySelectorAll('input, textarea').forEach(i => {
                 if (i.type === 'file') {
-                    i.value = null;          // archivo nuevo
+                    i.value = null;
                 } else if (i.name && i.name.endsWith(".ImageUrl")) {
-                    i.value = "";            // nueva imagen todavía no tiene url
+                    i.value = "";
                 } else if (i.name && i.name.endsWith(".Order")) {
-                    // valor provisional, luego renumberSteps() lo corrige igual
                     i.value = stepsList.querySelectorAll('.step-item').length;
                 } else {
-                    i.value = "";            // descripción, etc.
+                    i.value = "";
                 }
             });
 
             stepsList.appendChild(clone);
             renumberSteps();
         });
-
 
         stepsList.addEventListener('click', (e) => {
             if (e.target.classList.contains('btn-remove-step')) {
@@ -311,11 +320,44 @@
             }
         });
 
+        // --- MODO DE ENVÍO (borrador vs enviar) ---
+        let submitMode = "enviar"; // por defecto
+
+        const btnGuardar = document.getElementById('btn-guardar');
+        const btnEnviar  = document.getElementById('btn-enviar');
+
+        if (btnGuardar) {
+            btnGuardar.addEventListener('click', () => {
+                submitMode = "borrador";
+
+                document.querySelectorAll('form [required]').forEach(el => {
+                    el.dataset.wasRequired = "true";
+                    el.removeAttribute('required');
+                });
+            });
+        }
+
+        if (btnEnviar) {
+            btnEnviar.addEventListener('click', () => {
+                submitMode = "enviar";
+
+                document.querySelectorAll('form [data-was-required="true"]').forEach(el => {
+                    el.setAttribute('required', 'required');
+                });
+            });
+        }
+
         // --- VALIDACIÓN FINAL ---
         const form = document.querySelector('form');
         const titleInput = document.querySelector('input[name="Input.Title"]');
 
         form.addEventListener('submit', (e) => {
+
+            if (submitMode === "borrador") {
+                document.querySelectorAll('input[type="text"]').forEach(cleanTextAndCapitalize);
+                return;
+            }
+
             document.querySelectorAll('input[type="text"]').forEach(cleanTextAndCapitalize);
 
             if (titleInput && !titleInput.value.trim()) {

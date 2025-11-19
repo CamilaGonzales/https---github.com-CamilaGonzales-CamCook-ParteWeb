@@ -46,6 +46,10 @@ else
             string authorUid = r.TryGetValue("authorUid", out var au) ? au?.ToString() ?? "" : "";
             bool isOwner = !string.IsNullOrWhiteSpace(authorUid) && authorUid == currentUserUid;
 
+            string estado = r.TryGetValue("estado", out var estObj) ? estObj?.ToString() ?? "" : "";
+            bool esBorrador = estado == "borrador";
+
+
             <div class="list-group-item">
                 <div class="d-flex">
                     @if (!string.IsNullOrWhiteSpace(img))
@@ -56,7 +60,13 @@ else
                     }
 
                     <div class="flex-grow-1">
-                        <h5 class="mb-1">@titulo</h5>
+                        <h5 class="mb-1">
+                            @titulo
+                            @if (esBorrador)
+                            {
+                                <span class="badge bg-secondary ms-2">Guardada (borrador)</span>
+                            }
+                        </h5>
 
                         @if (!string.IsNullOrWhiteSpace(tiempo))
                         {

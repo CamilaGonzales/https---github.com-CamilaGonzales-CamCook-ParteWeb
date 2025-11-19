@@ -30,14 +30,31 @@ namespace CamCook.Pages.Recipes
             return Page();
         }
 
+        // ?? BOTÓN "Guardar" (borrador)
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> OnPostAsync(CancellationToken ct)
+        public async Task<IActionResult> OnPostGuardarAsync(CancellationToken ct)
+        {
+            return await CrearRecetaInternoAsync(ct, esBorrador: true);
+        }
+         
+        // BOTÓN "Mandar a revisar"
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> OnPostEnviarAsync(CancellationToken ct)
+        {
+            return await CrearRecetaInternoAsync(ct, esBorrador: false);
+        }
+
+        // ELIMINA tu antiguo OnPostAsync, ya no se usa
+
+        // LÓGICA COMPARTIDA
+        private async Task<IActionResult> CrearRecetaInternoAsync(CancellationToken ct, bool esBorrador)
         {
             if (!(User?.Identity?.IsAuthenticated ?? false))
                 return RedirectToPage("/Account/Login");
 
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid && !esBorrador)
                 return Page();
+
 
             try
             {
@@ -61,9 +78,21 @@ namespace CamCook.Pages.Recipes
                 Input.AuthorEmail = string.IsNullOrWhiteSpace(email) ? null : email;
                 Input.AuthorName = string.IsNullOrWhiteSpace(nombre) ? null : nombre;
 
-                var id = await _repo.CreateAsync(Input, ct);
+                string id;
 
-                TempData["ok"] = "Receta enviada a revisión. Te avisaremos cuando se publique.";
+                if (esBorrador)
+                {
+                    // ?? Guardar como borrador
+                    id = await _repo.CreateDraftAsync(Input, ct);
+                    TempData["ok"] = "Receta guardada como borrador. Puedes editarla o enviarla a revisión cuando quieras.";
+                }
+                else
+                {
+                    // ?? Enviar a revisión (flujo normal)
+                    id = await _repo.CreateAsync(Input, ct);
+                    TempData["ok"] = "Receta enviada a revisión. Te avisaremos cuando se publique.";
+                }
+
                 return RedirectToPage("/Recipes/List");
             }
             catch (OperationCanceledException)
@@ -77,6 +106,5 @@ namespace CamCook.Pages.Recipes
                 return Page();
             }
         }
-
     }
 }

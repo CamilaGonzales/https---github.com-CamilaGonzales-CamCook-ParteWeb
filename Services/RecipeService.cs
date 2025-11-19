@@ -121,7 +121,7 @@ public class RecetaService
         return docRef.Id;
     }
 
-    // 🔹 Lo demás queda como tú lo tenías:
+    //Lo demás queda como tú lo tenías:
 
     public async Task<List<RecetaPendienteDto>> ObtenerPendientesAsync()
     {
@@ -210,6 +210,7 @@ public class RecetaService
 
     public async Task<List<Dictionary<string, object>>> ObtenerPublicadasAsync(int limit = 100)
     {
+        // 👉 SOLO recetas publicadas (como antes)
         var query = _db.Collection("recetas")
                        .WhereEqualTo("estado", "publicada")
                        .Limit(limit);
@@ -239,6 +240,66 @@ public class RecetaService
             list.Add(dict);
         }
 
+        list = list
+            .OrderByDescending(d => d["__orden"])
+            .ToList();
+
+        foreach (var d in list) d.Remove("__orden");
+
+        return list;
+    }
+
+    // 👉 NUEVO: publicadas + borradores del usuario
+    public async Task<List<Dictionary<string, object>>> ObtenerPublicadasYBorradoresAsync(string? uid, int limitPublicadas = 100)
+    {
+        var list = new List<Dictionary<string, object>>();
+
+        // 1) Publicadas (para todos)
+        var queryPublicadas = _db.Collection("recetas")
+                                 .WhereEqualTo("estado", "publicada")
+                                 .Limit(limitPublicadas);
+
+        var snapPub = await queryPublicadas.GetSnapshotAsync();
+
+        foreach (var doc in snapPub.Documents)
+        {
+            var dict = doc.ToDictionary();
+            dict["id"] = doc.Id;
+
+            if (dict.TryGetValue("publicadoEn", out var pubObj) && pubObj is Timestamp tsPub)
+                dict["__orden"] = tsPub.ToDateTime();
+            else if (doc.CreateTime.HasValue)
+                dict["__orden"] = doc.CreateTime.Value.ToDateTime();
+            else
+                dict["__orden"] = DateTime.MinValue;
+
+            list.Add(dict);
+        }
+
+        // 2) Borradores SOLO del usuario actual
+        if (!string.IsNullOrWhiteSpace(uid))
+        {
+            var queryBorradores = _db.Collection("recetas")
+                                     .WhereEqualTo("estado", "borrador")
+                                     .WhereEqualTo("authorUid", uid);
+
+            var snapBor = await queryBorradores.GetSnapshotAsync();
+
+            foreach (var doc in snapBor.Documents)
+            {
+                var dict = doc.ToDictionary();
+                dict["id"] = doc.Id;
+
+                if (dict.TryGetValue("creadoEn", out var creObj) && creObj is Timestamp tsCre)
+                    dict["__orden"] = tsCre.ToDateTime();
+                else
+                    dict["__orden"] = DateTime.MinValue;
+
+                list.Add(dict);
+            }
+        }
+
+        // 3) Orden combinado
         list = list
             .OrderByDescending(d => d["__orden"])
             .ToList();
