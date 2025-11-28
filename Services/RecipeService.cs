@@ -1,5 +1,7 @@
 ﻿using CamCook.Models;
+using CamCook.Models.Api;
 using Google.Cloud.Firestore;
+using System;
 using System.Linq;
 
 namespace CamCook.Services;
@@ -7,6 +9,7 @@ namespace CamCook.Services;
 public class RecetaService
 {
     private readonly FirestoreDb _db;
+    private const string Col = "recetas";
     public RecetaService(FirestoreDb db) => _db = db;
 
     // 🔹 NUEVO: crear receta usando RecipeInput + IA
@@ -208,7 +211,7 @@ public class RecetaService
         await docRef.UpdateAsync(updates);
     }
 
-    public async Task<List<Dictionary<string, object>>> ObtenerPublicadasAsync(int limit = 100)
+    public async Task<List<Dictionary<string, object>>> ObtenerPublicadasAsync(string? search = null, int limit = 100)
     {
         // 👉 SOLO recetas publicadas (como antes)
         var query = _db.Collection("recetas")
@@ -239,7 +242,17 @@ public class RecetaService
 
             list.Add(dict);
         }
-
+        //  FILTRO DE BÚSQUEDA
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim().ToLower();
+            list = list
+                .Where(r =>
+                    (r.TryGetValue("titulo", out var t) && t?.ToString()?.ToLower().Contains(s) == true) ||
+                    (r.TryGetValue("descripcion", out var d) && d?.ToString()?.ToLower().Contains(s) == true)
+                )
+                .ToList();
+        }
         list = list
             .OrderByDescending(d => d["__orden"])
             .ToList();
@@ -250,7 +263,7 @@ public class RecetaService
     }
 
     // 👉 NUEVO: publicadas + borradores del usuario
-    public async Task<List<Dictionary<string, object>>> ObtenerPublicadasYBorradoresAsync(string? uid, int limitPublicadas = 100)
+    public async Task<List<Dictionary<string, object>>> ObtenerPublicadasYBorradoresAsync(string? uid, string? search = null, int limitPublicadas = 100)
     {
         var list = new List<Dictionary<string, object>>();
 
@@ -298,7 +311,17 @@ public class RecetaService
                 list.Add(dict);
             }
         }
-
+        // FILTRO DE BÚSQUEDA
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim().ToLower();
+            list = list
+                .Where(r =>
+                    (r.TryGetValue("titulo", out var t) && t?.ToString()?.ToLower().Contains(s) == true) ||
+                    (r.TryGetValue("descripcion", out var d) && d?.ToString()?.ToLower().Contains(s) == true)
+                )
+                .ToList();
+        }
         // 3) Orden combinado
         list = list
             .OrderByDescending(d => d["__orden"])
@@ -329,4 +352,301 @@ public class RecetaService
 
         return snap.ToDictionary();
     }
+    // ✅ Versión con UID actual (NUEVA)
+    public RecipieViewModel MapToVm(IDictionary<string, object> dict, string? currentUid)
+    {
+        if (dict == null) return new RecipieViewModel();
+
+        dict.TryGetValue("id", out var idObj);
+        dict.TryGetValue("titulo", out var tituloObj);
+        dict.TryGetValue("descripcion", out var descripcionObj);
+        dict.TryGetValue("imagenUrl", out var imagenObj);
+        dict.TryGetValue("autorUid", out var autorUidObj);
+        if (autorUidObj == null || string.IsNullOrWhiteSpace(autorUidObj.ToString()))
+            dict.TryGetValue("authorUid", out autorUidObj);
+        dict.TryGetValue("autorEmail", out var autorEmailObj);
+        if (autorEmailObj == null || string.IsNullOrWhiteSpace(autorEmailObj.ToString()))
+            dict.TryGetValue("authorEmail", out autorEmailObj);
+
+        dict.TryGetValue("estado", out var estadoObj);
+        dict.TryGetValue("pasos", out var pasosObj);
+
+        string? id = idObj?.ToString();
+        string? titulo = tituloObj?.ToString();
+        string? descripcion = descripcionObj?.ToString();
+        string? imagenUrl = imagenObj?.ToString();
+        string? autorUid = autorUidObj?.ToString();
+        string? autorEmail = autorEmailObj?.ToString();
+        string? estado = estadoObj?.ToString();
+
+        // fallback: primera imagen de los pasos
+        if (string.IsNullOrWhiteSpace(imagenUrl) && pasosObj is IEnumerable<object> pasos)
+        {
+            foreach (var p in pasos)
+            {
+                if (p is IDictionary<string, object> pasoDict &&
+                    pasoDict.TryGetValue("imagenUrl", out var imgPasoObj))
+                {
+                    var imgPaso = imgPasoObj?.ToString();
+                    if (!string.IsNullOrWhiteSpace(imgPaso))
+                    {
+                        imagenUrl = imgPaso;
+                        break;
+                    }
+                }
+            }
+        }
+
+        var vm = new RecipieViewModel
+        {
+            Id = id,
+            Titulo = titulo,
+            Descripcion = descripcion,
+            ImagenUrl = imagenUrl,
+            Autor = autorEmail,       // Nombre o email del autor
+            AutorUid = autorUid,      // Muy importante: para la condición en la vista
+            Publicado = estado == "publicada"
+        };
+
+        // AQUÍ está lo que me pediste, adaptado al dict
+        if (!string.IsNullOrWhiteSpace(currentUid) &&
+            !string.IsNullOrWhiteSpace(autorUid))
+        {
+            vm.EsAutor = autorUid == currentUid;
+        }
+
+        return vm;
+    }
+
+    // Versión vieja que sigue funcionando igual (NO rompe nada)
+    public RecipieViewModel MapToVm(IDictionary<string, object> dict)
+        => MapToVm(dict, null);
+
+
+
+    public async Task<Recipe?> ObtenerPorIdAsync(string id)
+    {
+        var snap = await _db.Collection("recetas").Document(id).GetSnapshotAsync();
+        if (!snap.Exists) return null;
+        return snap.ConvertTo<Recipe>();
+    }
+    public async Task<List<string>> ObtenerIdsOrdenadasAsync(CancellationToken ct)
+    {
+        var docs = await _db.Collection("recetas")
+            .OrderBy("titulo")                     // o por fecha, como prefieras
+            .GetSnapshotAsync(ct);
+
+        return docs.Documents
+                   .Select(d => d.Id)
+                   .ToList();
+    }
+    public async Task<List<string>> BuscarIdsPorTextoAsync(string texto, CancellationToken ct)
+    {
+        var resultados = await BuscarPorTextoAsync(texto, ct);
+        return resultados.Select(r => r["id"].ToString()!).ToList();
+    }
+    //  BÚSQUEDA EXACTA COMO ANDROID (título + descripción)
+    public async Task<List<Dictionary<string, object>>> BuscarPorTextoAsync(string texto, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(texto))
+            return new List<Dictionary<string, object>>();
+
+        var s = texto.Trim().ToLower();
+
+        // 1) Cargar recetas publicadas (igual que en Android / pantalla principal)
+        var snap = await _db.Collection("recetas")
+                            .WhereEqualTo("estado", "publicada")
+                            .GetSnapshotAsync(ct);
+
+        var list = new List<Dictionary<string, object>>();
+
+        foreach (var doc in snap.Documents)
+        {
+            var dict = doc.ToDictionary();
+            dict["id"] = doc.Id;
+
+            // agregar al índice si coincide título o descripción
+            var titulo = dict.TryGetValue("titulo", out var t) ? t?.ToString()?.ToLower() : "";
+            var desc = dict.TryGetValue("descripcion", out var d) ? d?.ToString()?.ToLower() : "";
+
+            if ((titulo != null && titulo.Contains(s)) ||
+                (desc != null && desc.Contains(s)))
+            {
+                list.Add(dict);
+            }
+        }
+
+        return list;
+    }
+    //public async Task<List<string>> BuscarIdsPorTextoOrdenadosAsync(string texto, CancellationToken ct)
+    //{
+    //    if (string.IsNullOrWhiteSpace(texto))
+    //        return new List<string>();
+
+    //    var s = texto.Trim().ToLower();
+
+    //    // Obtener todas las recetas publicadas
+    //    var snap = await _db.Collection("recetas")
+    //                        .WhereEqualTo("estado", "publicada")
+    //                        .GetSnapshotAsync(ct);
+
+    //    // Filtrar por coincidencias en título o descripción
+    //    var list = new List<Dictionary<string, object>>();
+    //    foreach (var doc in snap.Documents)
+    //    {
+    //        var dict = doc.ToDictionary();
+    //        dict["id"] = doc.Id;
+
+    //        var titulo = dict.TryGetValue("titulo", out var t) ? t?.ToString()?.ToLower() : "";
+    //        var desc = dict.TryGetValue("descripcion", out var d) ? d?.ToString()?.ToLower() : "";
+
+    //        if ((titulo != null && titulo.Contains(s)) ||
+    //            (desc != null && desc.Contains(s)))
+    //        {
+    //            list.Add(dict);
+    //        }
+    //    }
+
+    //    list = list
+    //        .OrderByDescending(r =>
+    //        {
+    //            var titulo = r.TryGetValue("titulo", out var t) ? t?.ToString()?.ToLower() : "";
+    //            return titulo != null && titulo.Contains(s) ? 1 : 0;
+    //        })
+    //        .ThenByDescending(r =>
+    //        {
+    //            var pub = r.TryGetValue("publicadoEn", out var p) && p is Timestamp ts ? ts.ToDateTime() : DateTime.MinValue;
+    //            return pub;
+    //        })
+    //        .ToList();
+
+    //    return list.Select(r => r["id"].ToString()!).ToList();
+    //}
+    public async Task<List<string>> BuscarIdsPorTextoOrdenadosAsync(string q, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(q))
+            return new List<string>();
+
+        var client = new HttpClient();
+
+        // ⚠️ Usa tu dominio correcto:
+        string url = $"https://fastapireconocimiento-2.onrender.com/buscar_ids?query={Uri.EscapeDataString(q)}";
+
+        ApiResponse? resp;
+        try
+        {
+            resp = await client.GetFromJsonAsync<ApiResponse>(url, cancellationToken: ct);
+        }
+        catch
+        {
+            return new List<string>();
+        }
+
+        if (resp == null || resp.resultados == null)
+            return new List<string>();
+
+        // ✔ Web navega solo entre los resultados reales filtrados
+        return resp.resultados
+            .Select(r => r.id)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToList();
+    }
+
+    public async Task<List<Dictionary<string, object>>> ObtenerDeAutorAsync(
+    string uid,
+    string? search = null)
+    {
+        var list = new List<Dictionary<string, object>>();
+
+        if (string.IsNullOrWhiteSpace(uid))
+            return list;
+
+        // SOLO recetas cuyo authorUid coincide con este usuario
+        var snap = await _db.Collection("recetas")
+                            .WhereEqualTo("authorUid", uid)
+                            .GetSnapshotAsync();
+
+        foreach (var doc in snap.Documents)
+        {
+            var dict = doc.ToDictionary();
+            dict["id"] = doc.Id;
+
+            if (dict.TryGetValue("publicadoEn", out var pubObj) && pubObj is Timestamp tsPub)
+                dict["__orden"] = tsPub.ToDateTime();
+            else if (dict.TryGetValue("creadoEn", out var creObj) && creObj is Timestamp tsCre)
+                dict["__orden"] = tsCre.ToDateTime();
+            else if (doc.CreateTime.HasValue)
+                dict["__orden"] = doc.CreateTime.Value.ToDateTime();
+            else
+                dict["__orden"] = DateTime.MinValue;
+
+            list.Add(dict);
+        }
+
+        // Filtro opcional solo dentro de MIS recetas
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim().ToLower();
+            list = list
+                .Where(r =>
+                    (r.TryGetValue("titulo", out var t) && t?.ToString()?.ToLower().Contains(s) == true) ||
+                    (r.TryGetValue("descripcion", out var d) && d?.ToString()?.ToLower().Contains(s) == true)
+                )
+                .ToList();
+        }
+
+        list = list
+            .OrderByDescending(d => d["__orden"])
+            .ToList();
+
+        foreach (var d in list) d.Remove("__orden");
+
+        return list;
+    }
+
+    public async Task<List<Dictionary<string, object>>> ObtenerPorAutorYEstadoAsync(
+     string authorUid,
+     string estado,
+     CancellationToken ct = default)
+    {
+        var list = new List<Dictionary<string, object>>();
+
+        if (string.IsNullOrWhiteSpace(authorUid))
+            return list;
+
+        var query = _db.Collection(Col)
+                       .WhereEqualTo("authorUid", authorUid)
+                       .WhereEqualTo("estado", estado);
+
+        var snap = await query.GetSnapshotAsync(ct);
+
+        foreach (var doc in snap.Documents)
+        {
+            if (ct.IsCancellationRequested) break;
+
+            var dict = doc.ToDictionary();
+            dict["id"] = doc.Id;
+
+            // orden para poder ordenar si quieres
+            if (dict.TryGetValue("creadoEn", out var creObj) && creObj is Timestamp tsCre)
+                dict["__orden"] = tsCre.ToDateTime();
+            else if (doc.CreateTime.HasValue)
+                dict["__orden"] = doc.CreateTime.Value.ToDateTime();
+            else
+                dict["__orden"] = DateTime.MinValue;
+
+            list.Add(dict);
+        }
+
+        // Orden opcional
+        list = list
+            .OrderByDescending(d => d["__orden"])
+            .ToList();
+
+        foreach (var d in list) d.Remove("__orden");
+
+        return list;
+    }
+
+
 }

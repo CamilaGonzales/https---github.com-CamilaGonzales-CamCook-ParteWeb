@@ -31,7 +31,37 @@
     }
 }
 
+
 <h2 class="mb-3">Moderación de Recetas (Pendientes y Rechazadas por IA)</h2>
+
+<div class="alert alert-info small mb-3">
+    <strong>¿Qué es esta pantalla?</strong>
+    <ul class="mb-0">
+        <li>
+            Aquí se muestran solo las recetas en estado <strong>pendiente</strong> o
+            <strong>rechazada por IA</strong>.
+        </li>
+        <li>
+            Una IA revisa el título y la descripción de la receta para detectar
+            <strong>lenguaje vulgar</strong> o <strong>contenido prohibido</strong>.
+        </li>
+        <li>
+            Las palabras que la IA marcó como problemáticas aparecen
+            <mark>resaltadas</mark> dentro del texto de la receta.
+        </li>
+        <li>
+            Como administrador puedes:
+            <strong>Aprobar</strong> (la receta pasa a estado publicado),
+            <strong>Rechazar</strong> indicando un motivo propio,
+            o <strong>Eliminar</strong> la receta definitivamente.
+        </li>
+        <li>
+            En el recuadro amarillo verás el <strong>motivo</strong> y el
+            <strong>veredicto de la IA</strong> que justifican por qué la receta fue marcada.
+        </li>
+    </ul>
+</div>
+
 
 @if (!string.IsNullOrEmpty(Model.Msg))
 {

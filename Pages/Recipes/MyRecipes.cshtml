@@ -1,0 +1,155 @@
+﻿@page
+@model CamCook.Pages.Recipes.MyRecipesModel
+@{
+    ViewData["Title"] = "Mis Recetas";
+}
+
+<div class="camcook-page-bg">
+    <div class="container py-4 camcook-main">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">Mis Recetas</h2>
+
+            <a class="btn btn-success" asp-page="/Recipes/Create">
+                + Crear Receta
+            </a>
+        </div>
+
+        <!-- BUSCADOR (opcional) -->
+        <form method="get" class="camcook-search-area mb-4">
+            <div class="camcook-search-input-wrapper">
+                <i class="fa fa-search camcook-search-icon"></i>
+                <input type="text"
+                       name="Search"
+                       value="@Model.Search"
+                       class="form-control camcook-search-input"
+                       placeholder="Buscar en mis recetas...">
+            </div>
+            <button class="btn camcook-search-btn">Buscar</button>
+        </form>
+
+        <!-- GRID DE MIS RECETAS -->
+        <div class="row g-4">
+            @foreach (var r in Model.Recetas)
+            {
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <article class="camcook-recipe-card h-100">
+
+                        <!-- Imagen -->
+                        <div class="camcook-recipe-img-wrapper">
+                            @if (!string.IsNullOrWhiteSpace(r.ImagenUrl))
+                            {
+                                <a asp-page="/Recipes/Details"
+                                   asp-route-id="@r.Id"
+                                   class="d-block">
+                                    <img src="@r.ImagenUrl"
+                                         alt="@r.Titulo"
+                                         class="camcook-recipe-img" />
+                                </a>
+                            }
+                            else
+                            {
+                                <a asp-page="/Recipes/Details"
+                                   asp-route-id="@r.Id"
+                                   class="camcook-recipe-img-placeholder d-flex align-items-center justify-content-center text-decoration-none">
+                                    Sin imagen
+                                </a>
+                            }
+                        </div>
+
+                        <div class="p-3">
+                            <!-- Título clickeable -->
+                            <h5 class="fw-semibold mb-2">
+                                <a asp-page="/Recipes/Details"
+                                   asp-route-id="@r.Id"
+                                   class="text-decoration-none text-dark">
+                                    @r.Titulo
+                                </a>
+                            </h5>
+
+                            <!-- Descripción -->
+                            <p class="camcook-recipe-excerpt mb-3">
+                                @r.Descripcion
+                            </p>
+
+                            <!-- METADATOS -->
+                            <div class="d-flex flex-wrap gap-2 mb-3 camcook-recipe-meta">
+                                @if (r.Calorias != null)
+                                {
+                                    <span class="camcook-chip-time">
+                                        🔥 @(r.Calorias ?? 0) kcal
+                                    </span>
+                                }
+
+                                @if (r.Likes != null)
+                                {
+                                    <span class="camcook-chip-time">
+                                        ❤️ @(r.Likes ?? 0)
+                                    </span>
+                                }
+
+                                @if (r.Views != null)
+                                {
+                                    <span class="camcook-chip-time">
+                                        👁 @(r.Views ?? 0)
+                                    </span>
+                                }
+                            </div>
+
+                            <!-- BOTONES (solo autor) -->
+                            @if (User.Identity?.IsAuthenticated ?? false && r.EsAutor)
+                            {
+                                <div class="d-flex gap-2">
+                                    <a class="btn btn-sm btn-outline-primary"
+                                       asp-page="/Recipes/Update"
+                                       asp-route-id="@r.Id">
+                                        Editar
+                                    </a>
+
+                                    <form method="post"
+                                          asp-page="/Recipes/Delete"
+                                          asp-route-id="@r.Id"
+                                          class="d-inline form-delete"
+                                          data-recipetitle="@r.Titulo">
+                                        <button type="submit"
+                                                class="btn btn-sm btn-outline-danger">
+                                            Eliminar
+                                        </button>
+                                    </form>
+                                </div>
+                            }
+                        </div>
+                    </article>
+                </div>
+            }
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        document.querySelectorAll('.form-delete').forEach(f => {
+            f.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const recipeTitle = f.dataset.recipetitle || 'esta receta';
+
+                Swal.fire({
+                    title: `¿Eliminar receta "${recipeTitle}"?`,
+                    text: 'Esta acción no se puede deshacer.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                }).then(result => {
+                    if (result.isConfirmed) {
+                        f.submit();
+                    }
+                });
+            });
+        });
+    </script>
+}

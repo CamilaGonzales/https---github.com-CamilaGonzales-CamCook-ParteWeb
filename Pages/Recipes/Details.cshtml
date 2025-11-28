@@ -1,135 +1,180 @@
-﻿@page "{id}"
+﻿@page "/Recipes/Details"
 @model CamCook.Pages.Recipes.DetailsModel
 @{
-    ViewData["Title"] = Model.Title ?? "Receta";
+    ViewData["Title"] = "Receta";
 }
 
-@if (!string.IsNullOrWhiteSpace(Model.Error))
+@if (Model.Doc == null)
 {
-    <div class="alert alert-danger">@Model.Error</div>
-}
-else if (Model.Doc == null)
-{
-    <div class="alert alert-warning">No se encontró la receta solicitada.</div>
+    <div class="alert alert-warning mt-4 text-center shadow-sm">
+        No se encontró la receta solicitada.
+    </div>
 }
 else
 {
-    <div class="container py-3">
+    <div class="camcook-page-bg camcook-main">
 
-        <div class="d-flex align-items-start gap-3 mb-3">
-            @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
-            {
-                <img src="@Model.ImageUrl"
-                     alt="@Model.Title"
-                     class="rounded"
-                     style="width:280px;height:280px;object-fit:cover;" />
-            }
-
-            <div class="flex-grow-1">
-                <h2 class="mb-2">@Model.Title</h2>
-
-                <!-- BADGES: tiempo, kcal, porciones, AUTOR -->
-                <div class="d-flex flex-wrap gap-2 mb-2">
-                    @if (!string.IsNullOrWhiteSpace(Model.PrepTimeText))
-                    {
-                        <span class="badge bg-secondary">⏱️ @Model.PrepTimeText</span>
-                    }
-                    @if (Model.Calories.HasValue)
-                    {
-                        <span class="badge bg-info text-dark">🔥 @Model.Calories kcal</span>
-                    }
-                    @if (Model.Servings.HasValue)
-                    {
-                        <span class="badge bg-success">🍽️ @Model.Servings porciones</span>
-                    }
-                    @* 👤 AUTOR, AL LADO DE PORCIONES *@
-                    @if (!string.IsNullOrWhiteSpace(Model.AuthorName) || !string.IsNullOrWhiteSpace(Model.AuthorEmail))
-                    {
-                        <span class="badge bg-light text-dark border">
-                            👤 @(!string.IsNullOrWhiteSpace(Model.AuthorName)
-                                                ? Model.AuthorName
-                                                : Model.AuthorEmail)
-                </span>
-                                }
-                </div>
-
-                <div class="text-muted small">
-                    @if (!string.IsNullOrWhiteSpace(Model.Estado))
-                    {
-                        <span class="me-2">Estado: <strong>@Model.Estado</strong></span>
-                    }
-                    @if (Model.PublicadoEn != null)
-                    {
-                        <span class="me-2">Publicado: @Model.PublicadoEn?.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
-                    }
-                    @* aquí ya NO mostramos el autor para que no se repita *@
-                </div>
-
-                <div class="mt-3">
-                    <a class="btn btn-outline-primary" asp-page="/Recipes/List">← Volver a la lista</a>
-                </div>
-            </div>
-        </div>
-
-        <hr />
-
-        <div class="row">
-            <div class="col-md-5">
-                <h4>Ingredientes</h4>
-                @if (Model.Ingredients.Count == 0)
+        <!-- NAV ENTRE RECETAS SOLO SI VIENE DE BÚSQUEDA -->
+        @if (!string.IsNullOrWhiteSpace(Model.Ids))
+        {
+            <div class="d-flex gap-2 mb-3">
+                @if (Model.PrevId != null)
                 {
-                    <div class="text-muted">Sin ingredientes cargados.</div>
+                    <a class="btn btn-outline-secondary rounded-pill px-4"
+                       asp-page="/Recipes/Details"
+                       asp-route-id="@Model.PrevId"
+                       asp-route-ids="@Model.Ids">⬅ Anterior</a>
                 }
-                else
+
+                @if (Model.NextId != null)
                 {
-                    <ul class="list-group">
-                        @foreach (var ing in Model.Ingredients)
+                    <a class="btn btn-outline-secondary rounded-pill px-4"
+                       asp-page="/Recipes/Details"
+                       asp-route-id="@Model.NextId"
+                       asp-route-ids="@Model.Ids">Siguiente ➡</a>
+                }
+            </div>
+        }
+
+        <!-- CARD PRINCIPAL -->
+        <div class="container">
+            <div class="recipe-detail-card shadow-lg p-4 rounded-4 bg-white">
+
+                <!-- HEADER VISUAL -->
+                <div class="row g-4">
+
+                    <!-- IMAGEN -->
+                    <div class="col-md-4">
+                        @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
                         {
-                            <li class="list-group-item">
-                                <div class="fw-semibold">@ing.Name</div>
-                                <div class="text-muted small">
-                                    @if (!string.IsNullOrWhiteSpace(ing.Quantity))
-                                    {
-                                        <span>@ing.Quantity</span>
-                                    }
-                                    @if (!string.IsNullOrWhiteSpace(ing.Unit))
-                                    {
-                                        <span> @ing.Unit</span>
-                                    }
-                                </div>
-                            </li>
+                            <img src="@Model.ImageUrl" alt="@Model.Title"
+                                 class="w-100 rounded-4 shadow-sm"
+                                 style="height:300px; object-fit:cover;">
                         }
-                    </ul>
-                }
-            </div>
+                    </div>
 
-            <div class="col-md-7">
-                <h4>Pasos</h4>
-                @if (Model.Steps.Count == 0)
-                {
-                    <div class="text-muted">Sin pasos cargados.</div>
-                }
-                else
-                {
-                    <ol class="list-group list-group-numbered">
-                        @foreach (var st in Model.Steps)
-                        {
-                            <li class="list-group-item">
-                                <div class="mb-2 fw-semibold">
-                                    @st.Description
-                                </div>
+                    <!-- TÍTULO + METADATA -->
+                    <div class="col-md-8 d-flex flex-column justify-content-between">
 
-                                @if (!string.IsNullOrWhiteSpace(st.ImageUrl))
+                        <div>
+                            <h1 class="fw-bold mb-2" style="color:#3E2723;">@Model.Title</h1>
+
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+
+                                @if (Model.Calorias != null)
                                 {
-                                    <img src="@st.ImageUrl"
-                                         alt="Paso @st.Order"
-                                         class="rounded shadow-sm"
-                                         style="width:100%;max-width:320px;height:auto;object-fit:cover;" />
+                                    <span class="camcook-chip">🔥 @Model.Calorias kcal</span>
                                 }
-                            </li>
+
+                                @if (Model.Porciones != null)
+                                {
+                                    <span class="camcook-chip">🍽️ @Model.Porciones porciones</span>
+                                }
+
+                                @if (Model.Views != null)
+                                {
+                                    <span class="camcook-chip">👁️ @Model.Views vistas</span>
+                                }
+
+                                @if (Model.Likes != null)
+                                {
+                                    <span class="camcook-chip">❤️ @Model.Likes likes</span>
+                                }
+
+                                @if (Model.PublicadoEn != null)
+                                {
+                                    <span class="camcook-chip">📅 Publicada: @Model.PublicadoEn?.ToShortDateString()</span>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- AUTOR -->
+                        @if (Model.AuthorName != null)
+                        {
+                            <div class="mt-3 camcook-author-box">
+                                <div class="small text-muted">Receta creada por</div>
+                                <div class="fw-semibold">@Model.AuthorName</div>
+                            </div>
                         }
-                    </ol>
-                }
+                    </div>
+                </div>
+
+                <!-- SEPARADOR -->
+                <div class="camcook-divider mt-4 mb-4"></div>
+
+                <!-- CONTENIDO PRINCIPAL -->
+                <div class="row g-4">
+
+                    <!-- INGREDIENTES -->
+                    <div class="col-md-5">
+                        <h3 class="section-title mb-3">🧺 Ingredientes</h3>
+
+                        @if (Model.Ingredients.Count == 0)
+                        {
+                            <div class="text-muted fst-italic">Sin ingredientes cargados.</div>
+                        }
+                        else
+                        {
+                            <ul class="list-group camcook-list shadow-sm">
+                                @foreach (var ing in Model.Ingredients)
+                                {
+                                    <li class="list-group-item border-0 py-3 px-3 camcook-item">
+                                        <div class="fw-semibold">@ing.Name</div>
+                                        <div class="small text-muted">
+                                            @ing.Quantity @ing.Unit
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+
+                    <!-- PASOS -->
+                    <div class="col-md-7">
+                        <h3 class="section-title mb-3">👨‍🍳 Pasos</h3>
+
+                        @if (Model.Steps.Count == 0)
+                        {
+                            <div class="text-muted fst-italic">Sin pasos cargados.</div>
+                        }
+                        else
+                        {
+                            <ol class="list-group list-group-numbered camcook-list shadow-sm">
+                                @foreach (var st in Model.Steps)
+                                {
+                                    <li class="list-group-item border-0 py-3 camcook-item">
+                                        <div class="fw-semibold mb-2">@st.Description</div>
+
+                                        @if (!string.IsNullOrWhiteSpace(st.ImageUrl))
+                                        {
+                                            <img src="@st.ImageUrl"
+                                                 class="rounded-4 shadow-sm mt-2"
+                                                 style="width:100%; max-width:360px;">
+                                        }
+                                    </li>
+                                }
+                            </ol>
+                        }
+                    </div>
+                </div>
+
+                <!-- INFO ADICIONAL DEL SISTEMA -->
+                <div class="mt-4">
+                    @if (Model.LikedBy != null)
+                    {
+                        <div class="mt-2 small text-muted">
+                            Usuarios que dieron like: @Model.LikedBy.Count
+                        </div>
+                    }
+
+                    @if (Model.ViewedBy != null)
+                    {
+                        <div class="mt-1 small text-muted">
+                            Usuarios que la vieron: @Model.ViewedBy.Count
+                        </div>
+                    }
+                </div>
+
             </div>
         </div>
     </div>

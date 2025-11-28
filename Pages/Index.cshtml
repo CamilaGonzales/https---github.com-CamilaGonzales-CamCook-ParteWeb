@@ -4,8 +4,93 @@
     ViewData["Title"] = "Home page";
 }
 
-<div class="text-center">
-    <img src="~/img/logo.png" alt="CamCook Logo" class="logo" />
-    <h1>Bienvenido a CamCook</h1>
+<div class="camcook-page-bg">
+    <div class="camcook-main container py-4">
 
+        <!-- Encabezado -->
+        <div class="text-center mb-4">
+            <img src="~/img/logo.png" alt="CamCook Logo" class="logo mb-2" />
+            <h1>Bienvenido a CamCook</h1>
+            <p class="text-muted">
+                Explora las recetas de la comunidad 🍽️
+            </p>
+        </div>
+
+        <!-- GRID DE RECETAS (todas las publicadas) -->
+        <div class="row g-4">
+            @foreach (var r in Model.Recetas)
+            {
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <!-- Toda la tarjeta es clickeable y lleva a Details -->
+                    <a class="text-decoration-none text-dark"
+                       asp-page="/Recipes/Details"
+                       asp-route-id="@r.Id"
+                       asp-route-ids="@Model.IdsConcatenados">
+                        <article class="camcook-recipe-card h-100">
+
+                            <!-- Imagen -->
+                            <div class="camcook-recipe-img-wrapper">
+                                @if (!string.IsNullOrWhiteSpace(r.ImagenUrl))
+                                {
+                                    <img src="@r.ImagenUrl"
+                                         alt="@r.Titulo"
+                                         class="camcook-recipe-img" />
+                                }
+                                else
+                                {
+                                    <div class="camcook-recipe-img-placeholder">
+                                        Sin imagen
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="p-3">
+
+                                <!-- Título -->
+                                <h5 class="fw-semibold mb-2">@r.Titulo</h5>
+
+                                <!-- Descripción corta -->
+                                <p class="camcook-recipe-excerpt mb-3">
+                                    @r.Descripcion
+                                </p>
+
+                                <!-- METADATOS (solo informativos) -->
+                                <div class="d-flex flex-wrap gap-2 camcook-recipe-meta">
+                                    @if (r.Calorias != null)
+                                    {
+                                        <span class="camcook-chip-time">
+                                            🔥 @(r.Calorias ?? 0) kcal
+                                        </span>
+                                    }
+
+                                    @if (r.Likes != null)
+                                    {
+                                        <span class="camcook-chip-time">
+                                            ❤️ @(r.Likes ?? 0)
+                                        </span>
+                                    }
+
+                                    @if (r.Views != null)
+                                    {
+                                        <span class="camcook-chip-time">
+                                            👁 @(r.Views ?? 0)
+                                        </span>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(r.Autor))
+                                    {
+                                        <span class="camcook-chip-time">
+                                            👨‍🍳 @r.Autor
+                                        </span>
+                                    }
+                                </div>
+
+                            </div>
+                        </article>
+                    </a>
+                </div>
+            }
+        </div>
+
+    </div>
 </div>

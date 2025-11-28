@@ -371,3 +371,43 @@
         });
     </script>
 }
+<script>
+    document.addEventListener("click", function (e) {
+
+        // === INGREDIENTES ===
+        if (e.target.classList.contains("btn-remove-ingredient")) {
+            e.preventDefault();
+
+            Swal.fire({
+                title: "¿Quitar ingrediente?",
+                text: "Este ingrediente será eliminado.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Sí, quitar",
+                cancelButtonText: "Cancelar"
+            }).then(result => {
+                if (result.isConfirmed) {
+                    e.target.closest(".ingredient-item").remove();
+                }
+            });
+        }
+
+        // === PASOS ===
+        if (e.target.classList.contains("btn-remove-step")) {
+            e.preventDefault();
+
+            Swal.fire({
+                title: "¿Quitar paso?",
+                text: "Este paso será eliminado.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Sí, quitar",
+                cancelButtonText: "Cancelar"
+            }).then(result => {
+                if (result.isConfirmed) {
+                    e.target.closest(".step-item").remove();
+                }
+            });
+        }
+    });
+</script>

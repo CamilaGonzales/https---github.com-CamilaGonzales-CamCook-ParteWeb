@@ -17,23 +17,6 @@ namespace CamCook.Pages.Recipes
         [BindProperty(SupportsGet = true)]
         public string Id { get; set; } = "";
 
-        public string Title { get; set; } = "";
-
-        public async Task<IActionResult> OnGetAsync()
-        {
-            var recipe = await _repo.GetByIdAsync(Id);
-            if (recipe == null) return NotFound();
-
-            var currentUserUid = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                                 ?? User.FindFirstValue("uid");
-
-            if (recipe.AuthorUid != currentUserUid)
-                return Forbid();
-
-            Title = recipe.Title;
-            return Page();
-        }
-
         public async Task<IActionResult> OnPostAsync()
         {
             var currentUserUid = User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -46,14 +29,13 @@ namespace CamCook.Pages.Recipes
             }
             catch (UnauthorizedAccessException)
             {
-                return Forbid();
+                TempData["error"] = "No puedes eliminar recetas de otros usuarios.";
             }
             catch
             {
                 TempData["error"] = "No se pudo eliminar la receta. Intenta de nuevo.";
             }
 
-            // Volvemos a la lista SIEMPRE (no login)
             return RedirectToPage("/Recipes/List");
         }
     }

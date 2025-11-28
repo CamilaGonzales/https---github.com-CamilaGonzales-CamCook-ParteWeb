@@ -112,6 +112,13 @@ namespace CamCook.Pages.Account
 
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
+            bool esAdmin = roles.Any(r =>
+            string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(r, "administrador", StringComparison.OrdinalIgnoreCase));
+
+            if (esAdmin)
+                return Redirect("/Admin/Dashboard");   // tu Razor Page de dashboard admin
+
             return Redirect("/Index");
         }
     }

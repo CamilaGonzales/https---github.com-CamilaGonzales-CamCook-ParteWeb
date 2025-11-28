@@ -2,10 +2,10 @@
 @model CamCook.Pages.Recipes.DeleteModel
 @using System.Security.Claims
 @{
-    ViewData["Title"] = "Eliminar Receta";
+    Layout = null;
 }
 
-<h2>Eliminar Receta</h2>
+@* <h2>Eliminar Receta</h2>
 
 <p>¿Estás seguro que quieres eliminar la receta: <strong>@Model.Title</strong>?</p>
 
@@ -16,4 +16,4 @@
     <input type="hidden" asp-for="Id" />
     <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
     <a asp-page="/Recipes/List" class="btn btn-sm btn-secondary ms-2">Cancelar</a>
-</form>
+</form> *@

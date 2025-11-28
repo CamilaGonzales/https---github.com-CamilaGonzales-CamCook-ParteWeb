@@ -5,47 +5,88 @@
     ViewData["Title"] = "Iniciar sesión";
 }
 
-<h2 class="mb-3">Iniciar sesión</h2>
+<section class="login-hero py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-8 col-lg-5">
 
-<form method="post" class="card p-3">
-    <div asp-validation-summary="All" class="text-danger mb-2"></div>
+                <!-- Card principal -->
+                <div class="card shadow-lg border-0 rounded-4 login-card p-4 p-md-5 mb-3">
+                    <div class="text-center mb-4">
+                        <img src="~/img/logo.png" alt="CamCook" width="72" class="mb-2" />
+                        <h2 class="h4 mb-1 fw-bold">Bienvenido a CamCook</h2>
+                        <p class="text-muted small mb-0">
+                            Inicia sesión para guardar y descubrir recetas.
+                        </p>
+                    </div>
 
-    <div class="mb-3">
-        <label asp-for="Username" class="form-label">Usuario o correo</label>
-        <input asp-for="Username" class="form-control" autocomplete="username" />
-        <span asp-validation-for="Username" class="text-danger"></span>
-    </div>
+                    <form method="post" novalidate>
+                        <div asp-validation-summary="All" class="text-danger small mb-2"></div>
 
-    <div class="mb-3">
-        <label asp-for="Password" class="form-label">Contraseña</label>
+                        <div class="mb-3">
+                            <label asp-for="Username" class="form-label">Usuario o correo</label>
+                            <input asp-for="Username"
+                                   class="form-control form-control-lg"
+                                   autocomplete="username" />
+                            <span asp-validation-for="Username" class="text-danger small"></span>
+                        </div>
 
-        <!-- INPUT + OJITO -->
-        <div class="input-group">
-            <!-- asp-for genera id="Password" -->
-            <input asp-for="Password"
-                   class="form-control"
-                   autocomplete="current-password" />
+                        <div class="mb-2">
+                            <label asp-for="Password" class="form-label">Contraseña</label>
 
-            <button type="button"
-                    class="btn btn-outline-secondary"
-                    id="togglePassword">
-                👁️
-            </button>
+                            <div class="input-group input-group-lg">
+                                <input asp-for="Password"
+                                       class="form-control"
+                                       autocomplete="current-password" />
+
+                                <button type="button"
+                                        class="btn btn-outline-secondary"
+                                        id="togglePassword">
+                                    <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                                </button>
+                            </div>
+
+                            <span asp-validation-for="Password" class="text-danger small"></span>
+                        </div>
+
+                        <div class="d-flex justify-content-end mb-3">
+                            <a asp-page="/Account/ForgotPassword"
+                               class="small text-decoration-none text-muted">
+                                ¿Olvidaste tu contraseña?
+                            </a>
+                        </div>
+
+                        <button type="submit"
+                                class="btn btn-dark w-100 rounded-pill py-2">
+                            Iniciar sesión
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-3 small text-muted">
+                        ¿Aún no tienes cuenta?
+                        <a asp-page="/Account/Register" class="text-decoration-none fw-semibold">
+                            Regístrate
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Card Google -->
+                <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4 text-center">
+                    <p class="small text-muted mb-3">
+                        O entra con tu cuenta de Google
+                    </p>
+                    <button id="btnGoogleLogin"
+                            class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2 rounded-pill py-2">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                             alt="Google" width="20" height="20" />
+                        <span>Iniciar sesión con Google</span>
+                    </button>
+                </div>
+
+            </div>
         </div>
-
-        <span asp-validation-for="Password" class="text-danger"></span>
     </div>
-
-    <button type="submit" class="btn btn-primary">Iniciar sesión</button>
-</form>
-
-<hr />
-
-<div class="card p-3">
-    <button id="btnGoogleLogin" class="btn btn-danger w-100">
-        Iniciar sesión con Google
-    </button>
-</div>
+</section>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
@@ -81,12 +122,15 @@
             .catch(err => console.error(err));
     });
 
-    // 👁️ Script para mostrar/ocultar contraseña
+    // 👁️ Script para mostrar/ocultar contraseña con icono de Bootstrap
     document.getElementById('togglePassword').addEventListener('click', function () {
         const input = document.getElementById('Password'); // id generado por asp-for="Password"
-        const isPassword = input.type === 'password';
+        const icon = document.getElementById('togglePasswordIcon');
 
+        const isPassword = input.type === 'password';
         input.type = isPassword ? 'text' : 'password';
-        this.textContent = isPassword ? '🙈' : '👁️'; // cambia el icono
+
+        icon.classList.toggle('bi-eye', !isPassword);
+        icon.classList.toggle('bi-eye-slash', isPassword);
     });
 </script>

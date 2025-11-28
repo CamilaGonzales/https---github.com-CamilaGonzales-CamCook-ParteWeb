@@ -1,0 +1,92 @@
+﻿@page
+@model CamCook.Pages.Admin.DashboardModel
+@{
+    ViewData["Title"] = "Dashboard administrador";
+}
+
+<div class="container py-4">
+
+    <h1 class="mb-4">Panel de administración</h1>
+
+    <!-- KPIs -->
+    <div class="row g-3 mb-4">
+
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="text-muted small">Usuarios</div>
+                    <div class="h3 mb-0">@Model.TotalUsers</div>
+                    <div class="text-success small">Activos: @Model.ActiveUsers</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="text-muted small">Recetas totales</div>
+                    <div class="h3 mb-0">@Model.TotalRecipes</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="text-muted small">Aprobadas</div>
+                    <div class="h3 mb-0">@Model.ApprovedRecipes</div>
+                    <div class="text-muted small">Rechazadas: @Model.RejectedRecipes</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="text-muted small">Marketplace</div>
+                    <div class="h3 mb-0">@Model.MarketplaceRecipes</div>
+                    <div class="text-warning small">Pendientes: @Model.PendingRecipes</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Histograma -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Recetas en marketplace por mes</h5>
+            <canvas id="chartMarketplace"></canvas>
+        </div>
+    </div>
+
+    <!-- Aquí puedes poner tabla de recetas pendientes, etc. -->
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+@section Scripts {
+    <script>
+        const labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartLabels));
+        const data = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartMarketplaceByMonth));
+
+        const ctx = document.getElementById('chartMarketplace');
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Recetas en marketplace',
+                    data: data
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    </script>
+}

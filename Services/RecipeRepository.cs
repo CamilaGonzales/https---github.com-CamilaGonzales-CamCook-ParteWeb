@@ -401,38 +401,40 @@ namespace CamCook.Services
         // === CREATE DRAFT (BORRADOR) ===
         public async Task<string> CreateDraftAsync(RecipeInput input, CancellationToken ct = default)
         {
-            // 1) Crear receta normal (con IA, imágenes, etc.)
+            // 1) Crear receta con toda la lógica normal (imágenes, IA, etc.)
             var id = await CreateAsync(input, ct);
 
-            // 2) Sobreescribir estado a "borrador"
+            // 2) Forzar a borrador y que NO esté publicada ni en marketplace
             var docRef = _db.Collection(Col).Document(id);
 
             await docRef.UpdateAsync(new Dictionary<string, object?>
             {
                 ["estado"] = "borrador",
                 ["publicada"] = false,
+                ["enMarketplace"] = false,
                 ["publicadoEn"] = FieldValue.Delete
             }, cancellationToken: ct);
 
             return id;
         }
 
-        // === UPDATE DRAFT (BORRADOR) ===
         public async Task UpdateDraftAsync(string id, RecipeInput input, string currentUserUid, CancellationToken ct = default)
         {
-            // Reutilizamos toda la lógica de UpdateAsync
+            // Actualizas normalmente el contenido de la receta
             await UpdateAsync(id, input, currentUserUid, ct);
 
-            // Y luego forzamos el estado a "borrador"
+            // Y luego vuelves a marcarla como borrador
             var docRef = _db.Collection(Col).Document(id);
 
             await docRef.UpdateAsync(new Dictionary<string, object?>
             {
                 ["estado"] = "borrador",
                 ["publicada"] = false,
+                ["enMarketplace"] = false,
                 ["publicadoEn"] = FieldValue.Delete
             }, cancellationToken: ct);
         }
+
 
     }
 }

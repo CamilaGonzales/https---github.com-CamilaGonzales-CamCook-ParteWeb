@@ -40,7 +40,7 @@ namespace CamCook.Pages.Recipes
             if (recipe.AuthorUid != uid)
                 return Forbid();
 
-            ExistingMainImageUrl = recipe.ImageUrl;
+            ExistingMainImageUrl = recipe.imagenUrl ?? recipe.mainImageUrl;
 
             Input = new RecipeInput
             {
@@ -93,7 +93,7 @@ namespace CamCook.Pages.Recipes
             {
                 // Recuperar la imagen actual para volver a mostrarla
                 var receta = await _repo.GetByIdAsync(Id, ct);
-                ExistingMainImageUrl = receta?.ImageUrl;
+                ExistingMainImageUrl = receta?.imagenUrl ?? receta?.mainImageUrl;
                 return Page();
             }
 

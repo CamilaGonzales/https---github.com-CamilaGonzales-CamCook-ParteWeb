@@ -1,137 +1,241 @@
 ﻿@page
 @model CamCook.Pages.Recipes.ListModel
 @using System.Security.Claims
-@functions {
-    string? CurrentUid() =>
-        User?.FindFirstValue(ClaimTypes.NameIdentifier)
-        ?? User?.FindFirstValue("uid");
-}
+
 @{
-    ViewData["Title"] = "Recetas publicadas";
-    var currentUserUid = CurrentUid() ?? "";
+    // UID del usuario logueado (o null si no hay sesión)
+    var currentUid = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                   ?? User.FindFirstValue("uid");
 }
 
-<h2 class="mb-3">Recetas publicadas</h2>
-
-@if (User?.Identity?.IsAuthenticated ?? false)
-{
-    <a class="btn btn-primary mb-3" asp-page="/Recipes/Create">+ Nueva receta</a>
-}
-
-@if (Model.Recetas == null || Model.Recetas.Count == 0)
-{
-    <p>No hay recetas publicadas todavía.</p>
-}
-else
-{
-    <div class="list-group">
-        @foreach (var r in Model.Recetas)
+<div class="camcook-page-bg">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        @if (User.Identity?.IsAuthenticated ?? false)
         {
-            string id = r.TryGetValue("id", out var idObj) ? idObj?.ToString() ?? "" : "";
-
-            string titulo =
-                (r.TryGetValue("titulo", out var t1) ? t1?.ToString() : null)
-                ?? (r.TryGetValue("title", out var t2) ? t2?.ToString() : null)
-                ?? "";
-
-            string tiempo =
-                (r.TryGetValue("tiempoPrep", out var tp1) ? tp1?.ToString() : null)
-                ?? (r.TryGetValue("prepTimeText", out var tp2) ? tp2?.ToString() : null)
-                ?? "";
-
-            string? img =
-                (r.TryGetValue("imagenUrl", out var im1) ? im1?.ToString() : null)
-                ?? (r.TryGetValue("mainImageUrl", out var im2) ? im2?.ToString() : null);
-
-            string authorUid = r.TryGetValue("authorUid", out var au) ? au?.ToString() ?? "" : "";
-            bool isOwner = !string.IsNullOrWhiteSpace(authorUid) && authorUid == currentUserUid;
-
-            string estado = r.TryGetValue("estado", out var estObj) ? estObj?.ToString() ?? "" : "";
-            bool esBorrador = estado == "borrador";
-
-
-            <div class="list-group-item">
-                <div class="d-flex">
-                    @if (!string.IsNullOrWhiteSpace(img))
-                    {
-                        <img src="@img" alt="@titulo"
-                             class="me-3 flex-shrink-0"
-                             style="width:120px;height:120px;object-fit:cover;border-radius:10px;" />
-                    }
-
-                    <div class="flex-grow-1">
-                        <h5 class="mb-1">
-                            @titulo
-                            @if (esBorrador)
-                            {
-                                <span class="badge bg-secondary ms-2">Guardada (borrador)</span>
-                            }
-                        </h5>
-
-                        @if (!string.IsNullOrWhiteSpace(tiempo))
-                        {
-                            <div class="text-muted mb-2">⏱️ Tiempo: @tiempo</div>
-                        }
-
-                        <a class="btn btn-sm btn-success"
-                           asp-page="/Recipes/Details" asp-route-id="@id">
-                            Ver receta →
-                        </a>
-
-                        @if (isOwner)
-                        {
-                            <a class="btn btn-sm btn-primary ms-2"
-                               asp-page="/Recipes/Update" asp-route-id="@id">
-                                Editar
-                            </a>
-
-                            <form method="post"
-                                  asp-page="/Recipes/Delete"
-                                  asp-route-id="@id"
-                                  data-titulo="@titulo"
-                                  class="d-inline ms-2 form-eliminar-receta">
-                                <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
-                            </form>
-
-
-                        }
-                    </div>
-                </div>
-            </div>
+            <a class="btn btn-success" asp-page="/Recipes/Create">+ Crear Receta</a>
         }
     </div>
-}
+
+    <div class="container py-4 camcook-main">
+
+        <!-- BUSCADOR -->
+        <form method="get" class="camcook-search-area mb-4">
+            <div class="camcook-search-input-wrapper">
+                <i class="fa fa-search camcook-search-icon"></i>
+                <input type="text"
+                       name="search"
+                       value="@Model.Search"
+                       class="form-control camcook-search-input"
+                       placeholder="Buscar recetas...">
+            </div>
+            <button class="btn camcook-search-btn">Buscar</button>
+        </form>
+
+        @* 🔹 SECCIÓN: MIS BORRADORES (solo si hay y está logueado) *@
+    @if ((User.Identity?.IsAuthenticated ?? false) 
+        && Model.Borradores != null 
+        && Model.Borradores.Any())
+    {
+        <h4 class="mb-3">Mis borradores</h4>
+
+        <div class="row g-4 mb-5">
+            @foreach (var r in Model.Borradores)
+            {
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <article class="camcook-recipe-card h-100">
+
+                        <div class="camcook-recipe-img-wrapper">
+                            @if (!string.IsNullOrWhiteSpace(r.ImagenUrl))
+                            {
+                                <img src="@r.ImagenUrl"
+                                     alt="@r.Titulo"
+                                     class="camcook-recipe-img" />
+                            }
+                            else
+                            {
+                                <div class="camcook-recipe-img-placeholder">
+                                    Sin imagen
+                                </div>
+                            }
+                        </div>
+
+                        <div class="p-3">
+
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <h5 class="fw-semibold mb-0">@r.Titulo</h5>
+                                <span class="badge bg-secondary">Borrador</span>
+                            </div>
+
+                            <p class="camcook-recipe-excerpt mb-3">
+                                @r.Descripcion
+                            </p>
+
+                            <div class="d-flex flex-wrap gap-2 mb-3 camcook-recipe-meta">
+                                @if (r.Calorias != null)
+                                {
+                                    <span class="camcook-chip-time">
+                                        🔥 @(r.Calorias.HasValue ? r.Calorias.Value.ToString() : "-") kcal
+                                    </span>
+                                }
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-2">
+                                <a class="btn btn-sm btn-outline-primary"
+                                   asp-page="/Recipes/Update"
+                                   asp-route-id="@r.Id">
+                                    Seguir editando
+                                </a>
+
+                                @* Si quieres permitir eliminar borradores desde aquí *@
+                                <form method="post"
+                                      asp-page="/Recipes/Delete"
+                                      asp-route-id="@r.Id"
+                                      class="d-inline form-delete"
+                                      data-recipetitle="@r.Titulo">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        Eliminar
+                                    </button>
+                                </form>
+                            </div>
+
+                        </div>
+                    </article>
+                </div>
+            }
+        </div>
+
+        <h4 class="mb-3">Recetas publicadas</h4>
+    }
+
+        <!-- GRID DE RECETAS -->
+        <div class="row g-4">
+            @foreach (var r in Model.Recetas)
+            {
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <article class="camcook-recipe-card h-100">
+
+                        <!-- Imagen uniforme -->
+                        <div class="camcook-recipe-img-wrapper">
+                            @if (!string.IsNullOrWhiteSpace(r.ImagenUrl))
+                            {
+                                <img src="@r.ImagenUrl"
+                                     alt="@r.Titulo"
+                                     class="camcook-recipe-img" />
+                            }
+                            else
+                            {
+                                <div class="camcook-recipe-img-placeholder">
+                                    Sin imagen
+                                </div>
+                            }
+                        </div>
+
+                        <div class="p-3">
+
+                            <!-- Título -->
+                            <h5 class="fw-semibold mb-2">@r.Titulo</h5>
+
+                            <!-- Descripción corta -->
+                            <p class="camcook-recipe-excerpt mb-3">
+                                @r.Descripcion
+                            </p>
+
+                            <!-- METADATOS -->
+                            <div class="d-flex flex-wrap gap-2 mb-3 camcook-recipe-meta">
+
+                                @if (r.Calorias != null)
+                                {
+                                    <span class="camcook-chip-time">
+                                        🔥 @(r.Calorias.HasValue? r.Calorias.Value.ToString() : "-") kcal
+                                    </span>
+                                }
+
+                                @if (r.Likes != null)
+                                {
+                                    <span class="camcook-chip-time">
+                                        ❤️ @(r.Likes ?? -1)
+                                    </span>
+                                }
+
+                                @if (r.Views != null)
+                                {
+                                    <span class="camcook-chip-time">
+                                        👁 @(r.Views ?? -1)
+                                    </span>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(r.Autor))
+                                {
+                                    <span class="camcook-chip-time">
+                                        👨‍🍳 @r.Autor
+                                    </span>
+                                }
+
+                                @* Botones de edición y eliminación SOLO si la receta es del usuario actual *@
+                                @if ((User.Identity?.IsAuthenticated ?? false) && r.EsAutor)
+                                {
+                                    <span class="camcook-chip-time">
+                                        <a class="btn btn-sm btn-outline-primary"
+                                           asp-page="/Recipes/Update"
+                                           asp-route-id="@r.Id">
+                                            Editar
+                                        </a>
+                                    </span>
+                                    <span class="camcook-chip-time">
+                                        <form method="post"
+                                              asp-page="/Recipes/Delete"
+                                              asp-route-id="@r.Id"
+                                              class="d-inline form-delete"
+                                              data-recipetitle="@r.Titulo">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                Eliminar
+                                            </button>
+                                        </form>
+                                    </span>
+                                }
+
+                            </div>
+
+                            <!-- BOTÓN PRINCIPAL -->
+                            <a class="btn btn-primary btn-block"
+                               asp-page="/Recipes/Details"
+                               asp-route-id="@r.Id"
+                               asp-route-ids="@string.Join(",", Model.Recetas.Select(x => x.Id))">
+                                Ver receta →
+                            </a>
+
+                        </div>
+                    </article>
+                </div>
+            }
+        </div>
+
+    </div>
+</div>
 
 @section Scripts {
-    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const deleteForms = document.querySelectorAll('.form-eliminar-receta');
+        document.querySelectorAll('.form-delete').forEach(f => {
+            f.addEventListener('submit', function (e) {
+                e.preventDefault();
 
-            deleteForms.forEach(function (form) {
-                form.addEventListener('submit', function (e) {
-                    e.preventDefault(); // Evita que se envíe directo
+                const recipeTitle = f.dataset.recipetitle || 'esta receta';
 
-                    const titulo = form.getAttribute('data-titulo') || 'esta receta';
-
-                    Swal.fire({
-                        title: '¿Eliminar la receta definitivamente?',
-                        text: 'Se eliminará de forma permanente: "' + titulo + '"',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Sí, eliminar',
-                        cancelButtonText: 'Cancelar',
-                        reverseButtons: true
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            form.submit(); // Ahora sí se envía el formulario
-                        }
-                    });
+                Swal.fire({
+                    title: `¿Eliminar receta "${recipeTitle}"?`,
+                    text: 'Esta acción no se puede deshacer.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                }).then(result => {
+                    if (result.isConfirmed) {
+                        f.submit(); // hace el POST real al Delete
+                    }
                 });
             });
         });
     </script>
 }
-

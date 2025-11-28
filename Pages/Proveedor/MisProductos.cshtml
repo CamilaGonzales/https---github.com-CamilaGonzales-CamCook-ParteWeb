@@ -1,21 +1,91 @@
 ﻿@page
 @model CamCook.Pages.Proveedor.MisProductosModel
+
 @{
+    ViewData["Title"] = "Mis productos";
 }
-<h2>Mis Productos</h2>
 
-@foreach (var p in Model.Productos)
-{
-    <div class="card p-2 mb-3" style="width:250px">
-        <img src="@p["imagen"]" />
-
-        <div class="card-body">
-            <h5>@p["nombre"]</h5>
-            <p>@p["precio"] Bs</p>
+<section class="py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <h2 class="mb-0">Mis productos</h2>
+            <small class="text-muted">
+                @Model.Productos.Count producto@(Model.Productos.Count == 1 ? "" : "s") publicado@(Model.Productos.Count == 1 ? "" : "s")
+            </small>
         </div>
+
+        <a asp-page="/Marketplace/Index" class="btn btn-outline-warning rounded-pill">
+            Ver en Marketplace
+        </a>
     </div>
-}
-@if (!string.IsNullOrEmpty(Model.MensajeError))
-{
-    <div class="alert alert-warning">@Model.MensajeError</div>
-}
+
+    @if (!string.IsNullOrEmpty(Model.MensajeError))
+    {
+        <div class="alert alert-warning">@Model.MensajeError</div>
+    }
+
+    @if (Model.Productos == null || Model.Productos.Count == 0)
+    {
+        <div class="card border-0 shadow-sm text-center p-4">
+            <div class="mb-2">
+                <i class="bi bi-box-seam fs-1 text-warning"></i>
+            </div>
+            <h5 class="mb-1">Aún no tienes productos publicados</h5>
+            <p class="text-muted mb-3">
+                Cuando registres productos desde la app o el panel de proveedor, aparecerán aquí.
+            </p>
+            <a asp-page="/Marketplace/Index" class="btn btn-warning text-white rounded-pill px-4">
+                Ir al Marketplace
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4 mt-1">
+            @foreach (var p in Model.Productos)
+            {
+                var img   = p.ContainsKey("imagen") ? p["imagen"]?.ToString() : "";
+                var nombre = p.ContainsKey("nombre") ? p["nombre"]?.ToString() ?? "Producto" : "Producto";
+                var precio = p.ContainsKey("precio") ? p["precio"]?.ToString() ?? "" : "";
+
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <div class="card h-100 shadow-sm border-0 proveedor-product-card">
+                        @if (!string.IsNullOrWhiteSpace(img))
+                        {
+                            <div class="ratio ratio-4x3">
+                                <img src="@img"
+                                     alt="@nombre"
+                                     class="card-img-top rounded-top object-fit-cover" />
+                            </div>
+                        }
+
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title mb-1 text-truncate">@nombre</h5>
+                            <p class="card-text text-warning fw-semibold mb-2">
+                                @if (!string.IsNullOrEmpty(precio))
+                                {
+                                    @precio @:Bs
+                                }
+                                else
+                                {
+                                    @:Precio no definido
+                                }
+                            </p>
+
+                            <p class="card-text text-muted small mb-3">
+                                Producto publicado en tu catálogo de proveedor.
+                            </p>
+
+                            <div class="mt-auto d-flex justify-content-between align-items-center">
+                                <span class="badge bg-light text-secondary">
+                                    <i class="bi bi-shop me-1"></i>Activo
+                                </span>
+                                <!-- Aquí más adelante puedes agregar botones de editar / eliminar -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</section>

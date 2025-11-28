@@ -1,0 +1,59 @@
+﻿@page "{id}"
+@model CamCook.Pages.Marketplace.ProveedorDetalleModel
+
+@if (Model.Proveedor == null)
+{
+    <div class="alert alert-warning">Proveedor no encontrado.</div>
+}
+else
+{
+    <div class="container py-4">
+        <h2>@Model.Proveedor.Nombre</h2>
+        <p><strong>Teléfono:</strong> @Model.Proveedor.Telefono</p>
+        <p><strong>Tipo:</strong> @Model.Proveedor.Tipo</p>
+        <p><strong>Ciudad:</strong> @Model.Proveedor.Ciudad</p>
+
+        <h4>Recetas</h4>
+        <div class="row g-3">
+            @foreach (var prod in Model.Proveedor.Productos.Where(p => p.Tipo == "receta"))
+            {
+                <div class="col-12 col-sm-6 col-md-4">
+                    <div class="card h-100 shadow-sm border-0">
+                        @if (!string.IsNullOrWhiteSpace(prod.Imagen))
+                        {
+                            <img src="@prod.Imagen" class="card-img-top" style="height:180px;object-fit:cover;" />
+                        }
+                        <div class="card-body">
+                            <h5>@prod.Nombre</h5>
+                            <p>Precio: Bs.@prod.Precio</p>
+                            @if (!string.IsNullOrWhiteSpace(prod.RecetaId))
+                            {
+                                <a asp-page="/Recipes/Details" asp-route-id="@prod.RecetaId" class="btn btn-sm btn-outline-success mt-2">Ver receta</a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <h4 class="mt-4">Ingredientes</h4>
+        <div class="row g-3">
+            @foreach (var prod in Model.Proveedor.Productos.Where(p => p.Tipo == "ingrediente"))
+            {
+                <div class="col-12 col-sm-6 col-md-4">
+                    <div class="card h-100 shadow-sm border-0">
+                        @if (!string.IsNullOrWhiteSpace(prod.Imagen))
+                        {
+                            <img src="@prod.Imagen" class="card-img-top" style="height:180px;object-fit:cover;" />
+                        }
+                        <div class="card-body">
+                            <h5>@prod.Nombre</h5>
+                            <p>Cantidad: @prod.Cantidad @prod.Unidad</p>
+                            <p>Precio: Bs.@prod.Precio</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}

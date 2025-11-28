@@ -14,6 +14,6 @@ namespace CamCook.Services
         Task DeleteAsync(string id, string currentUserUid, CancellationToken ct = default);
         Task<string> CreateDraftAsync(RecipeInput input, CancellationToken ct = default);
         Task UpdateDraftAsync(string id, RecipeInput input, string currentUserUid, CancellationToken ct = default);
-
+        
     }
 }

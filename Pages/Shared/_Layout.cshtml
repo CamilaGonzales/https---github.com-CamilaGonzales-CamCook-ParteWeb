@@ -1,61 +1,48 @@
 ﻿@using System.Security.Claims
 @inject Google.Cloud.Firestore.FirestoreDb Db
+
 @{
     bool esProveedor = false;
     bool isAdmin = false;
 
-    string googleUid = User.FindFirstValue(ClaimTypes.NameIdentifier); // ahora es google_uid
+    string googleUid = User?.FindFirstValue(ClaimTypes.NameIdentifier)
+                        ?? User?.FindFirstValue("uid");
 
-
-    if (User?.Identity?.IsAuthenticated ?? false)
+    if (User?.Identity?.IsAuthenticated ?? false && !string.IsNullOrEmpty(googleUid))
     {
-        if (!string.IsNullOrEmpty(googleUid))
+        try
         {
+            // Proveedor aprobado
             var provSnap = await Db.Collection("proveedores")
-                .WhereEqualTo("userId", googleUid) // proveedores enlazados por google_uid
+                .WhereEqualTo("userId", googleUid)
                 .WhereEqualTo("estado_validacion", "aprobado")
                 .GetSnapshotAsync();
 
             esProveedor = provSnap.Count > 0;
-             // ADMIN
+
+            // Datos de usuario
             var userDoc = await Db.Collection("usuarios")
                 .Document(googleUid)
                 .GetSnapshotAsync();
 
             if (userDoc.Exists)
             {
-                // Campo esAdmin (bool)
-                if (userDoc.TryGetValue<bool>("esAdmin", out var adminFlag))
-                {
-                    if (adminFlag == true)
-                        isAdmin = true;
-                }
+                if (userDoc.TryGetValue<bool>("esAdmin", out var adminFlag) && adminFlag)
+                    isAdmin = true;
 
-                // Campo rol (string)
-                if (userDoc.TryGetValue<string>("rol", out var rolString))
+                if (userDoc.TryGetValue<string>("rol", out var rolString) &&
+                    rolString.Equals("admin", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (rolString.Equals("admin", StringComparison.OrdinalIgnoreCase))
-                        isAdmin = true;
+                    isAdmin = true;
                 }
             }
         }
-        else
+        catch
         {
-            <p style="color:red;">UID es NULL — tus claims no están configurados.</p>
+            esProveedor = false;
+            isAdmin = false;
         }
     }
-}
-@if (!User.Identity.IsAuthenticated)
-{
-    <p>DEBUG UID CLAIM: @googleUid</p>
-
-    <p>No has iniciado sesión.</p>
-}
-else
-{
-    <p style="color:red; font-weight:bold;">
-        No eres un proveedor aprobado o tu UID no coincide.
-    </p>
 }
 
 <!DOCTYPE html>
@@ -68,120 +55,213 @@ else
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/CamCook.styles.css" asp-append-version="true" />
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
 
-    <!-- SweetAlert2 -->
+    <!-- SweetAlert2 global -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     @RenderSection("Styles", required: false)
 </head>
 
-<body>
-    <!-- NAVBAR -->
+<body class="camcook-body">
+
+    <!-- 🔝 NAVBAR estilo CamCook -->
     <header>
-        <nav class="navbar navbar-expand-lg navbar-light bg-warning shadow-sm">
+
+        <!-- Franja superior tipo tabs -->
+        <div class="camcook-topbar shadow-sm">
+            <div class="container d-flex align-items-center justify-content-between gap-3">
+
+                <!-- Logo + tabs -->
+                <div class="d-flex align-items-center gap-2">
+                    <a class="navbar-brand d-flex align-items-center text-decoration-none" asp-page="/Index">
+                        <img src="~/img/logo.png" alt="CamCook Logo" width="40" height="40" class="me-2" />
+                        <span class="fs-4 fw-bold text-dark">CamCook</span>
+                    </a>
+
+                    <nav class="camcook-tabs d-none d-md-flex">
+                        <a class="camcook-tab @(Context.Request.Path == "/" ? "active" : "")"
+                           asp-page="/Index">INICIO</a>
+
+                        <button type="button" class="camcook-tab btn btn-link p-0 border-0">
+                            CHEFS
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Iconos + login/logout escritorio -->
+                <div class="d-flex align-items-center gap-3">
+
+                    <!-- Favoritos (placeholder) -->
+                    <button class="camcook-icon-btn" type="button" title="Favoritos">
+                        <i class="bi bi-heart"></i>
+                    </button>
+
+                    <!-- Marketplace SOLO como icono -->
+                    <a asp-page="/Marketplace/Index" class="camcook-market-btn" title="Marketplace">
+                        <i class="bi bi-shop"></i>
+                    </a>
+
+                    <!-- Login / Logout en escritorio (junto al icono de tienda) -->
+                    @if (User?.Identity?.IsAuthenticated ?? false)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link text-dark fw-semibold" asp-page="/Recipes/MyRecipes">
+                                Mis recetas
+                             </a>
+                        </li>
+
+                        <div class="d-none d-lg-flex align-items-center gap-2 ms-1">
+                            <span class="text-dark small fw-semibold d-flex align-items-center">
+                                <i class="bi bi-person-circle me-1"></i>
+                                @User.Identity?.Name
+                            </span>
+                            <a asp-page="/Account/Logout"
+                               class="btn btn-outline-dark btn-sm rounded-pill px-3">
+                                Cerrar sesión
+                            </a>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-none d-lg-flex align-items-center gap-2 ms-1">
+                            <a asp-page="/Account/Register"
+                               class="text-dark small fw-semibold text-decoration-none">
+                                Registro
+                            </a>
+                            <a asp-page="/Account/Login"
+                               class="btn btn-dark btn-sm rounded-pill px-3">
+                                Iniciar sesión
+                            </a>
+                        </div>
+                    }
+
+                    <!-- Hamburguesa móvil -->
+                    <!-- Botón hamburguesa (móvil / tablet) -->
+                    <button class="btn btn-outline-dark d-lg-none"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#camcookNavCollapse"
+                            aria-controls="camcookNavCollapse"
+                            aria-expanded="false"
+                            aria-label="Toggle navigation">
+                        <i class="bi bi-list"></i>
+                    </button>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Segunda fila: menú colapsable (solo cosas extra, sin marketplace) -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
             <div class="container">
-                <a class="navbar-brand d-flex align-items-center" asp-page="/Index">
-                    <img src="~/img/logo.png" alt="CamCook Logo" width="40" height="40" class="me-2" />
-                    <span class="fs-4 fw-bold text-dark">CamCook</span>
-                </a>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#navbarContent" aria-controls="navbarContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+                
 
-                <div class="collapse navbar-collapse" id="navbarContent">
-                    <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                <!-- Links colapsables -->
+                <div class="collapse navbar-collapse" id="camcookNavCollapse">
+                    <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
 
-                        <li class="nav-item">
-                            <a class="nav-link text-dark fw-semibold" asp-page="/Recipes/List">Recetas</a>
-                        </li>
+                        @* 🔸 YA NO hay enlace a Marketplace aquí *@
 
-                        <li class="nav-item">
-                            <a class="nav-link text-dark fw-semibold" asp-page="/Privacy">Privacidad</a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-page="/Recipes/Create">Nueva receta</a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link text-dark fw-semibold" asp-page="/Marketplace/Index">Marketplace</a>
-                        </li>
-
-
-                        
-                        <!-- SOLO PROVEEDORES APROBADOS -->
+                        @* SOLO PROVEEDORES APROBADOS *@
                         @if (esProveedor)
                         {
                             <li class="nav-item">
-                            <a class="nav-link text-dark fw-semibold" asp-page="/Proveedor/MisProductos">
-                                Mis productos
-                            </a>
-                        </li>
-                        }
-
-                        <!-- ADMIN -->
-                        @if (isAdmin)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-danger fw-bold" asp-page="/Admin/Moderacion/Index">
-                                    Moderar recetas
+                                <a class="nav-link text-dark fw-semibold" asp-page="/Proveedor/MisProductos">
+                                    Mis productos
                                 </a>
                             </li>
                         }
 
-                        <!-- USUARIO LOGIN -->
-                        @if (User?.Identity?.IsAuthenticated ?? false)
+                        @* ADMIN – lo dejamos opcional, pero no está ligado a “recetas” visibles en navbar *@
+                        @* Si quieres ocultarlo también, comenta este bloque *@
+                        @if (isAdmin)
                         {
                             <li class="nav-item">
-                                <span class="nav-link text-dark fw-semibold">
+                                <a class="nav-link text-danger fw-bold" asp-page="/Admin/Moderacion/Index">
+                                    Moderación
+                                </a>
+                            </li>
+                        }
+
+                        @* Login / logout versión móvil *@
+                        @if (User?.Identity?.IsAuthenticated ?? false)
+                        {
+                            <li class="nav-item d-lg-none mt-2">
+                                <span class="nav-link text-dark fw-semibold d-flex align-items-center">
+                                    <i class="bi bi-person-circle me-1"></i>
                                     @User.Identity?.Name
                                 </span>
                             </li>
-
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-page="/Account/Logout">Cerrar sesión</a>
+                            <li class="nav-item d-lg-none mb-2">
+                                <a class="btn btn-outline-dark w-100 rounded-pill"
+                                   asp-page="/Account/Logout">
+                                    Cerrar sesión
+                                </a>
                             </li>
                         }
                         else
                         {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-page="/Account/Login">Login</a>
+                            <li class="nav-item d-lg-none mt-2">
+                                <a class="nav-link text-dark fw-semibold"
+                                   asp-page="/Account/Register">
+                                    Registro
+                                </a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-page="/Account/Register">Registro</a>
+                            <li class="nav-item d-lg-none mb-2">
+                                <a class="btn btn-dark w-100 rounded-pill"
+                                   asp-page="/Account/Login">
+                                    Iniciar sesión
+                                </a>
                             </li>
                         }
 
                     </ul>
+
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+    
+                        @* 🔥 Solo admins ven este item *@
+                        @if (User.IsInRole("admin") || User.IsInRole("administrador"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-page="/Admin/Dashboard">
+                                    <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                                </a>
+                            </li>
+                        }
+                    </ul>
+
                 </div>
             </div>
         </nav>
+
     </header>
 
-    <!-- CONTENIDO -->
-    <div class="container">
-        @if (TempData["ok"] is string okMsg)
-        {
-            <div class="alert alert-success mt-3">@okMsg</div>
-        }
+    <!-- CONTENIDO + FONDO CON CÍRCULOS ANIMADOS -->
+    <div class="camcook-page-bg">
+        <div class="camcook-main container py-3 position-relative">
+            @if (TempData["ok"] is string okMsg)
+            {
+                <div class="alert alert-success mt-2">@okMsg</div>
+            }
 
-        @if (TempData["error"] is string errMsg)
-        {
-            <div class="alert alert-danger mt-3">@errMsg</div>
-        }
+            @if (TempData["error"] is string errMsg)
+            {
+                <div class="alert alert-danger mt-2">@errMsg</div>
+            }
 
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
+            <main role="main" class="pb-3 position-relative">
+                @RenderBody()
+            </main>
+        </div>
     </div>
 
     <!-- FOOTER -->
     <footer class="bg-dark text-white mt-5 pt-4 pb-3">
         <div class="container text-center">
-            <img src="~/img/logo.png" width="50" />
+            <img src="~/img/logo.png" width="50" alt="CamCook" />
             <h5 class="mt-2">CamCook – Tu recetario virtual</h5>
             <p class="small">Explora, guarda y comparte tus recetas favoritas.</p>
 

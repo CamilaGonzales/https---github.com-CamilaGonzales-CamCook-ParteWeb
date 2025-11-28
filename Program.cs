@@ -80,6 +80,8 @@ builder.Services.AddSingleton<IImageStorage, ImgbbImageStorage>();
 builder.Services.AddScoped<IRecipeRepository, RecipeRepository>();
 builder.Services.AddScoped<RecetaService>();
 builder.Services.AddSingleton<UsuarioService>();
+builder.Services.AddSingleton<BuscadorService>();
+
 
 // =====================================================
 //  Razor Pages y Controllers
