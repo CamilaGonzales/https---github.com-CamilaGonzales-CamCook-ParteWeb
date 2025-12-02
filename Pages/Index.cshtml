@@ -42,87 +42,90 @@
             @foreach (var r in Model.Recetas)
             {
                 <div class="col-12 col-sm-6 col-md-3">
-                    <!-- Toda la tarjeta es clickeable y lleva a Details -->
-                    <a class="text-decoration-none text-dark"
-                       asp-page="/Recipes/Details"
-                       asp-route-id="@r.Id"
-                       asp-route-ids="@Model.IdsConcatenados">
-                        <article class="camcook-recipe-card h-100">
+                    <article class="camcook-recipe-card h-100 position-relative">
 
-                            <!-- Imagen -->
-                            <div class="camcook-recipe-img-wrapper">
-                                @if (!string.IsNullOrWhiteSpace(r.ImagenUrl))
-                                {
+                        <!-- Imagen -->
+                        <div class="camcook-recipe-img-wrapper">
+                            @if (!string.IsNullOrWhiteSpace(r.ImagenUrl))
+                            {
+                                <a asp-page="/Recipes/Details"
+                                   asp-route-id="@r.Id"
+                                   asp-route-ids="@Model.IdsConcatenados"
+                                   class="d-block">
                                     <img src="@r.ImagenUrl"
                                          alt="@r.Titulo"
                                          class="camcook-recipe-img" />
-                                }
-                                else
+                                </a>
+                            }
+                            else
+                            {
+                                <a asp-page="/Recipes/Details"
+                                   asp-route-id="@r.Id"
+                                   asp-route-ids="@Model.IdsConcatenados"
+                                   class="camcook-recipe-img-placeholder d-flex align-items-center justify-content-center text-decoration-none">
+                                    Sin imagen
+                                </a>
+                            }
+                            
+                            @* Se eliminó el corazón flotante para evitar confusión en la UI. El like se muestra en el footer. *@
+                        </div>
+
+                        <div class="p-3">
+
+                            <!-- Título clickeable -->
+                            <h5 class="fw-semibold mb-2">
+                                <a asp-page="/Recipes/Details"
+                                   asp-route-id="@r.Id"
+                                   asp-route-ids="@Model.IdsConcatenados"
+                                   class="text-decoration-none text-dark">
+                                    @r.Titulo
+                                </a>
+                            </h5>
+
+                            <!-- Descripción corta -->
+                            <p class="camcook-recipe-excerpt mb-3">
+                                @r.Descripcion
+                            </p>
+
+                            <!-- METADATOS (solo informativos) -->
+                            <div class="d-flex flex-wrap gap-2 camcook-recipe-meta">
+                                @if (!string.IsNullOrWhiteSpace(r.TiempoPrep))
                                 {
-                                    <div class="camcook-recipe-img-placeholder">
-                                        Sin imagen
-                                    </div>
+                                    <span class="camcook-chip-time">
+                                        ⏱️ @r.TiempoPrep
+                                    </span>
+                                }
+
+                                @if (r.Porciones != null && r.Porciones > 0)
+                                {
+                                    <span class="camcook-chip-time">
+                                        🍽️ @r.Porciones porciones
+                                    </span>
+                                }
+
+                                @if (r.Calorias != null)
+                                {
+                                    <span class="camcook-chip-time">
+                                        🔥 @(r.Calorias ?? 0) kcal
+                                    </span>
+                                }
+
+                                @* removido corazón de metadatos; se muestra en el footer con texto *@
+                                @* vistas removidas del metadata *@
+
+                                @if (!string.IsNullOrWhiteSpace(r.Autor))
+                                {
+                                    <span class="camcook-chip-time">
+                                        👨‍🍳 @r.Autor
+                                    </span>
                                 }
                             </div>
 
-                            <div class="p-3">
-
-                                <!-- Título -->
-                                <h5 class="fw-semibold mb-2">@r.Titulo</h5>
-
-                                <!-- Descripción corta -->
-                                <p class="camcook-recipe-excerpt mb-3">
-                                    @r.Descripcion
-                                </p>
-
-                                <!-- METADATOS (solo informativos) -->
-                                <div class="d-flex flex-wrap gap-2 camcook-recipe-meta">
-                                    @if (!string.IsNullOrWhiteSpace(r.TiempoPrep))
-                                    {
-                                        <span class="camcook-chip-time">
-                                            ⏱️ @r.TiempoPrep
-                                        </span>
-                                    }
-
-                                    @if (r.Porciones != null && r.Porciones > 0)
-                                    {
-                                        <span class="camcook-chip-time">
-                                            🍽️ @r.Porciones porciones
-                                        </span>
-                                    }
-
-                                    @if (r.Calorias != null)
-                                    {
-                                        <span class="camcook-chip-time">
-                                            🔥 @(r.Calorias ?? 0) kcal
-                                        </span>
-                                    }
-
-                                    @if (r.Likes != null)
-                                    {
-                                        <span class="camcook-chip-time">
-                                            ❤️ @(r.Likes ?? 0)
-                                        </span>
-                                    }
-
-                                    @if (r.Views != null)
-                                    {
-                                        <span class="camcook-chip-time">
-                                            👁️ @(r.Views ?? 0)
-                                        </span>
-                                    }
-
-                                    @if (!string.IsNullOrWhiteSpace(r.Autor))
-                                    {
-                                        <span class="camcook-chip-time">
-                                            👨‍🍳 @r.Autor
-                                        </span>
-                                    }
-                                </div>
 
                             </div>
-                        </article>
-                    </a>
+
+                            @* footer de vistas eliminado (no se muestra en web) *@
+                    </article>
                 </div>
             }
         </div>

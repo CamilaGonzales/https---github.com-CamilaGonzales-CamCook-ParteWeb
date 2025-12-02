@@ -35,7 +35,6 @@
                 <div class="card-body">
                     <div class="text-muted small">Aprobadas</div>
                     <div class="h3 mb-0">@Model.ApprovedRecipes</div>
-                    <div class="text-muted small">Rechazadas: @Model.RejectedRecipes</div>
                 </div>
             </div>
         </div>
@@ -43,9 +42,9 @@
         <div class="col-6 col-md-3">
             <div class="card shadow-sm border-0">
                 <div class="card-body">
-                    <div class="text-muted small">Marketplace</div>
-                    <div class="h3 mb-0">@Model.MarketplaceRecipes</div>
-                    <div class="text-warning small">Pendientes: @Model.PendingRecipes</div>
+                    <div class="text-muted small">Recetas rechazadas</div>
+                    <div class="h3 mb-0">@Model.RejectedRecipes</div>
+                    <div class="text-danger small">Pendientes: @Model.PendingRecipes</div>
                 </div>
             </div>
         </div>

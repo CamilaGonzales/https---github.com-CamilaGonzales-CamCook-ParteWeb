@@ -54,23 +54,21 @@ namespace CamCook.Pages.Admin
                 string estado = GetEstadoReceta(data);   // ?? usamos helper
                 bool enMarketplace = IsEnMarketplace(data);
 
-                switch (estado)
+                // Normalizar y clasificar estados reales que usamos en Firestore.
+                // En la base de datos es comÃºn encontrar valores como: "publicada", "pendiente_admin", "revisar", "rechazada_ai", etc.
+                var s = (estado ?? string.Empty).ToLowerInvariant();
+
+                if (s.Contains("public") || s.Contains("aprob"))
                 {
-                    case "aprobada":
-                    case "aprobado":
-                        ApprovedRecipes++;
-                        break;
-
-                    case "rechazada":
-                    case "reprobada":
-                    case "rechazado":
-                    case "reprobado":
-                        RejectedRecipes++;
-                        break;
-
-                    case "pendiente":
-                        PendingRecipes++;
-                        break;
+                    ApprovedRecipes++;
+                }
+                else if (s.Contains("rechaz") || s.Contains("reprob") || s.Contains("reject"))
+                {
+                    RejectedRecipes++;
+                }
+                else if (s.Contains("pend") || s.Contains("revis") || s.Contains("review"))
+                {
+                    PendingRecipes++;
                 }
 
                 if (enMarketplace)
@@ -80,22 +78,17 @@ namespace CamCook.Pages.Admin
 
         private async Task LoadMarketplaceHistogramAsync()
         {
-            // Siempre trabajar en UTC para Firestore
+            // EstadÃ­sticas: contar recetas creadas por mes (Ãºltimos 12 meses)
             var ahoraUtc = DateTime.UtcNow;
-
-            // Primer día del mes actual en UTC y retrocedemos 11 meses
             var inicioUtc = new DateTime(ahoraUtc.Year, ahoraUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc)
                             .AddMonths(-11);
 
-            // Recetas de los últimos 12 meses
+            // Consultamos por fecha de creaciÃ³n primaria: "creadoEn". Si no existe, intentamos campos alternativos.
             var query = _db.Collection("recetas")
-                           .WhereGreaterThanOrEqualTo(
-                               "fechaPublicacion",
-                               Timestamp.FromDateTime(inicioUtc));   // ?? ahora sí es UTC
+                           .WhereGreaterThanOrEqualTo("creadoEn", Timestamp.FromDateTime(inicioUtc));
 
             var snap = await query.GetSnapshotAsync();
 
-            // Inicializar 12 meses
             var dict = new SortedDictionary<string, int>();
             for (int i = 0; i < 12; i++)
             {
@@ -108,19 +101,23 @@ namespace CamCook.Pages.Admin
             {
                 var data = doc.ToDictionary();
 
-                bool enMarketplace = IsEnMarketplace(data);   // ?? igual que arriba
-                if (!enMarketplace) continue;
+                // Preferir creadoEn, luego publicadoEn/fechaPublicacion
+                Timestamp? ts = null;
+                if (data.TryGetValue("creadoEn", out var c) && c is Timestamp tc)
+                    ts = tc;
+                else if (data.TryGetValue("publicadoEn", out var p) && p is Timestamp tp)
+                    ts = tp;
+                else if (data.TryGetValue("fechaPublicacion", out var fp) && fp is Timestamp tfp)
+                    ts = tfp;
 
-                if (!data.TryGetValue("fechaPublicacion", out var fechaObj) || fechaObj is not Timestamp ts)
+                if (ts == null)
                     continue;
 
-                var fecha = ts.ToDateTime();
+                var fecha = ts.Value.ToDateTime();
                 var key = new DateTime(fecha.Year, fecha.Month, 1).ToString("yyyy-MM");
 
-                if (dict.ContainsKey(key))
-                    dict[key]++;
+                if (dict.ContainsKey(key)) dict[key]++;
             }
-
 
             var cultura = new System.Globalization.CultureInfo("es-ES");
             ChartLabels = dict.Keys
@@ -131,6 +128,7 @@ namespace CamCook.Pages.Admin
                 })
                 .ToList();
 
+            // Reutilizamos la propiedad existente para mantener la vista sin cambios
             ChartMarketplaceByMonth = dict.Values.ToList();
         }
 

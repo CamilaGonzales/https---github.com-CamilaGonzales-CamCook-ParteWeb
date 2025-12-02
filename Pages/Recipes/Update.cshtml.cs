@@ -81,12 +81,21 @@ namespace CamCook.Pages.Recipes
             return await ActualizarRecetaInternoAsync(ct, esBorrador: false);
         }
 
-        // ================== LÓGICA COMPARTIDA ==================
+        // ================== LÃ“GICA COMPARTIDA ==================
 
         private async Task<IActionResult> ActualizarRecetaInternoAsync(CancellationToken ct, bool esBorrador)
         {
             if (!(User?.Identity?.IsAuthenticated ?? false))
                 return RedirectToPage("/Account/Login");
+
+            // ValidaciÃ³n para borrador: el tÃ­tulo es obligatorio
+            if (esBorrador && string.IsNullOrWhiteSpace(Input.Title))
+            {
+                ModelState.AddModelError(nameof(Input.Title), "El tÃ­tulo es obligatorio incluso para guardar como borrador.");
+                var receta = await _repo.GetByIdAsync(Id, ct);
+                ExistingMainImageUrl = receta?.imagenUrl ?? receta?.mainImageUrl;
+                return Page();
+            }
 
             // Para borrador dejamos pasar aunque el modelo no sea perfecto
             if (!ModelState.IsValid && !esBorrador)
@@ -109,26 +118,36 @@ namespace CamCook.Pages.Recipes
                     return Page();
                 }
 
-                // Validación ligera de imágenes: si no se sube nueva, se conserva la existente (ImageUrl)
+                // Validaciï¿½n ligera de imï¿½genes: si no se sube nueva, se conserva la existente (ImageUrl)
                 foreach (var step in Input.Steps)
                 {
                     if (step.Image == null || step.Image.Length == 0)
                     {
-                        // No se subió nueva imagen, se mantiene la URL que venga en ImageUrl
+                        // No se subiï¿½ nueva imagen, se mantiene la URL que venga en ImageUrl
                         continue;
                     }
                 }
 
                 if (esBorrador)
                 {
-                    // ?? Necesita que tengas implementado IRecipeRepository.UpdateDraftAsync
+                    // Guardar como borrador siempre (aunque haya validaciones pendientes)
                     await _repo.UpdateDraftAsync(Id, Input, uid, ct);
-                    TempData["ok"] = "Cambios guardados como borrador. Puedes enviarlos a revisión cuando quieras.";
+
+                    if (!ModelState.IsValid)
+                    {
+                        TempData["ok"] = "Cambios guardados como borrador. AtenciÃ³n: hay validaciones pendientes que deben revisarse antes de enviar a revisiÃ³n.";
+                        // Recuperar la imagen actual para volver a mostrarla en la vista
+                        var receta = await _repo.GetByIdAsync(Id, ct);
+                        ExistingMainImageUrl = receta?.imagenUrl ?? receta?.mainImageUrl;
+                        return Page();
+                    }
+
+                    TempData["ok"] = "Cambios guardados como borrador. Puedes enviarlos a revisiÃ³n cuando quieras.";
                 }
                 else
                 {
                     await _repo.UpdateAsync(Id, Input, uid, ct);
-                    TempData["ok"] = "Cambios enviados a revisión. Te avisaremos cuando se publique.";
+                    TempData["ok"] = "Cambios enviados a revisiÃ³n. Te avisaremos cuando se publique.";
                 }
 
                 return RedirectToPage("/Recipes/List");
@@ -144,7 +163,7 @@ namespace CamCook.Pages.Recipes
             catch (Exception ex)
             {
                 _log.LogError(ex, "Error actualizando receta {Id}", Id);
-                ModelState.AddModelError(string.Empty, "Ocurrió un error al actualizar la receta. Intenta de nuevo.");
+                ModelState.AddModelError(string.Empty, "Ocurriï¿½ un error al actualizar la receta. Intenta de nuevo.");
                 return Page();
             }
         }

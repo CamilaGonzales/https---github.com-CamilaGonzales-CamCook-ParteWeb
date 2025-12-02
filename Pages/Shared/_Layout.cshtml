@@ -99,15 +99,14 @@
                     </a>
 
                     <!-- Login / Logout en escritorio (junto al icono de tienda) -->
-                    @if (User?.Identity?.IsAuthenticated ?? false)
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link text-dark fw-semibold" asp-page="/Recipes/MyRecipes">
-                                Mis recetas
-                             </a>
-                        </li>
-
-                        <div class="d-none d-lg-flex align-items-center gap-2 ms-1">
+                        @if (User?.Identity?.IsAuthenticated ?? false)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark fw-semibold" asp-page="/Recipes/MyRecipes">
+                                    Mis recetas
+                                </a>
+                            </li>
+                       <div class="d-none d-lg-flex align-items-center gap-2 ms-1">
                             <span class="text-dark small fw-semibold d-flex align-items-center">
                                 <i class="bi bi-person-circle me-1"></i>
                                 @User.Identity?.Name

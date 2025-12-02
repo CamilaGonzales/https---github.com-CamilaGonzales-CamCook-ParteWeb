@@ -159,22 +159,11 @@ public class RecetaService
         {
             var userRef = _db.Collection("usuarios").Document(autorUid);
 
+            // Al aprobar una receta, actualizar el rol del usuario a "chef"
             await userRef.UpdateAsync(new Dictionary<string, object>
             {
-                ["roles"] = FieldValue.ArrayUnion("usuario", "chef"),
+                ["rol"] = "chef",
                 ["actualizadoEn"] = Timestamp.FromDateTime(DateTime.UtcNow)
-            });
-
-            await _db.RunTransactionAsync(async tx =>
-            {
-                var snap = await tx.GetSnapshotAsync(userRef);
-                if (!snap.Exists) return;
-
-                var rolAntiguo = snap.ContainsField("rol") ? snap.GetValue<string>("rol") : "";
-                if (string.IsNullOrWhiteSpace(rolAntiguo) || rolAntiguo == "usuario")
-                {
-                    tx.Update(userRef, new Dictionary<string, object> { ["rol"] = "chef" });
-                }
             });
         }
     }
@@ -693,5 +682,147 @@ public class RecetaService
         return list;
     }
 
+    // ==================== LIKES Y VIEWS ====================
 
+    /// <summary>
+    /// Agrega un like a una receta por parte de un usuario.
+    /// </summary>
+    public async Task AddLikeAsync(string recetaId, string userId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(recetaId) || string.IsNullOrWhiteSpace(userId))
+            return;
+
+        var recetaRef = _db.Collection(Col).Document(recetaId);
+        
+        await recetaRef.UpdateAsync(new Dictionary<string, object>
+        {
+            ["liked_by." + userId] = true,
+            ["likes"] = FieldValue.Increment(1)
+        }, cancellationToken: ct);
+    }
+
+    /// <summary>
+    /// Remueve un like de una receta por parte de un usuario.
+    /// </summary>
+    public async Task RemoveLikeAsync(string recetaId, string userId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(recetaId) || string.IsNullOrWhiteSpace(userId))
+            return;
+
+        var recetaRef = _db.Collection(Col).Document(recetaId);
+        
+        await recetaRef.UpdateAsync(new Dictionary<string, object>
+        {
+            ["liked_by." + userId] = FieldValue.Delete,
+            ["likes"] = FieldValue.Increment(-1)
+        }, cancellationToken: ct);
+    }
+
+    /// <summary>
+    /// Registra una vista de una receta por parte de un usuario (solo una vez por usuario).
+    /// </summary>
+    public async Task AddViewAsync(string recetaId, string userId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(recetaId))
+            return;
+
+        var recetaRef = _db.Collection(Col).Document(recetaId);
+
+        // Si no hay userId (vista anónima), solo incrementar views sin mapear viewed_by
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            await recetaRef.UpdateAsync(new Dictionary<string, object>
+            {
+                ["views"] = FieldValue.Increment(1)
+            }, cancellationToken: ct);
+            return;
+        }
+
+        // Obtener la receta actual para verificar si el usuario ya la vio
+        var snap = await recetaRef.GetSnapshotAsync(ct);
+        if (!snap.Exists) return;
+
+        var dict = snap.ToDictionary();
+        var viewedByDict = dict.TryGetValue("viewed_by", out var vb) && vb is Dictionary<string, object> v
+            ? v
+            : new Dictionary<string, object>();
+
+        // Si el usuario ya vio la receta, no incrementar nuevamente
+        if (viewedByDict.ContainsKey(userId)) return;
+
+        // Agregar el usuario a viewed_by e incrementar views
+        await recetaRef.UpdateAsync(new Dictionary<string, object>
+        {
+            ["viewed_by." + userId] = true,
+            ["views"] = FieldValue.Increment(1)
+        }, cancellationToken: ct);
+    }
+
+    /// <summary>
+    /// Obtiene las recetas favoritas (que el usuario likeó).
+    /// </summary>
+    public async Task<List<Dictionary<string, object>>> ObtenerFavoritosAsync(string userId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+            return new List<Dictionary<string, object>>();
+
+        var list = new List<Dictionary<string, object>>();
+
+        // Obtener todas las recetas publicadas
+        var snap = await _db.Collection(Col)
+                            .WhereEqualTo("estado", "publicada")
+                            .GetSnapshotAsync(ct);
+
+        foreach (var doc in snap.Documents)
+        {
+            var dict = doc.ToDictionary();
+            
+            // Verificar si este usuario likeó la receta
+            if (dict.TryGetValue("liked_by", out var lb) && lb is Dictionary<string, object> likedByDict)
+            {
+                if (likedByDict.ContainsKey(userId))
+                {
+                    dict["id"] = doc.Id;
+                    
+                    // Ordenar por fecha de publicación
+                    if (dict.TryGetValue("publicadoEn", out var pubObj) && pubObj is Timestamp tsPub)
+                        dict["__orden"] = tsPub.ToDateTime();
+                    else if (doc.CreateTime.HasValue)
+                        dict["__orden"] = doc.CreateTime.Value.ToDateTime();
+                    else
+                        dict["__orden"] = DateTime.MinValue;
+
+                    list.Add(dict);
+                }
+            }
+        }
+
+        // Ordenar por fecha descendente
+        list = list.OrderByDescending(d => d["__orden"]).ToList();
+        foreach (var d in list) d.Remove("__orden");
+
+        return list;
+    }
+
+    /// <summary>
+    /// Verifica si un usuario likeó una receta específica.
+    /// </summary>
+    public async Task<bool> UserLikedRecipeAsync(string recetaId, string userId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(recetaId) || string.IsNullOrWhiteSpace(userId))
+            return false;
+
+        var snap = await _db.Collection(Col).Document(recetaId).GetSnapshotAsync(ct);
+        if (!snap.Exists) return false;
+
+        var dict = snap.ToDictionary();
+        if (dict.TryGetValue("liked_by", out var lb) && lb is Dictionary<string, object> likedByDict)
+        {
+            return likedByDict.ContainsKey(userId);
+        }
+
+        return false;
+    }
 }
+
+

@@ -70,14 +70,56 @@ public static class AnalizadorIA
         { score -= 0.10; flags.Add("MAYÚSCULAS excesivas"); }
 
         // Vulgaridades + ilegales
+        // Mejora: normalizamos a minúsculas y tokenizamos solo letras/dígitos para detectar variantes
+        var simple = Regex.Replace(texto.ToLowerInvariant(), "[^a-z0-9s]", " ");
+        var tokens = simple.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+
+        var foundVulgar = new List<string>();
+        var foundIlegal = new List<string>();
+
+        // Buscar coincidencias directas en tokens
         foreach (var w in Vulgaridades)
-            if (Regex.IsMatch(texto, $@"\b{Regex.Escape(w)}\b", RegexOptions.IgnoreCase))
-            { score -= 0.50; flags.Add($"Lenguaje vulgar: {w}"); }
+        {
+            if (tokens.Contains(w.ToLowerInvariant())) foundVulgar.Add(w);
+        }
 
         foreach (var w in Ilegales)
-            if (Regex.IsMatch(texto, $@"\b{Regex.Escape(w)}\b", RegexOptions.IgnoreCase))
-            { score -= 0.80; flags.Add($"Contenido prohibido: {w}"); }
+        {
+            if (tokens.Contains(w.ToLowerInvariant())) foundIlegal.Add(w);
+        }
 
+        // Buscar pares ofensivos adyacentes (ej. "puto idiota") o si aparecen como dos tokens cercanos
+        if (foundVulgar.Count == 0)
+        {
+            for (int i = 0; i < tokens.Count - 1; i++)
+            {
+                var a = tokens[i];
+                var b = tokens[i + 1];
+                if (Vulgaridades.Contains(a) && Vulgaridades.Contains(b))
+                {
+                    if (!foundVulgar.Contains(a)) foundVulgar.Add(a);
+                    if (!foundVulgar.Contains(b)) foundVulgar.Add(b);
+                }
+            }
+        }
+
+        // Si encontramos algo prohibido o vulgar, agregamos flags y forzamos rechazo
+        if (foundIlegal.Count > 0)
+        {
+            foreach (var it in foundIlegal) flags.Add($"Contenido prohibido: {it}");
+            // puntaje mínimo
+            score = 0;
+            return new AiResult(score, flags, AiVerdict.Reject);
+        }
+
+        if (foundVulgar.Count > 0)
+        {
+            foreach (var it in foundVulgar) flags.Add($"Lenguaje vulgar: {it}");
+            score = 0;
+            return new AiResult(score, flags, AiVerdict.Reject);
+        }
+
+        // Si no encontramos coincidencias críticas, mantenemos heurísticas previas
         score = Math.Clamp(score, 0, 1);
         var verdict = score >= 0.80 ? AiVerdict.Ok
                     : score >= 0.50 ? AiVerdict.Review

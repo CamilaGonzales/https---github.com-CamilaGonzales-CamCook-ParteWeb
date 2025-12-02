@@ -8,6 +8,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -131,6 +132,21 @@ namespace CamCook.Pages.Recipes
             ViewedBy = Doc.TryGetValue("viewed_by", out var vb) ? vb as IDictionary<string, object> : null;
             Flags = Doc.TryGetValue("flags", out var fg) ? fg as IDictionary<string, object> : null;
             AI = Doc.TryGetValue("ai", out var ai) ? ai as IDictionary<string, object> : null;
+
+            // -------------------------------------------------------
+            // REGISTRAR VIEW (si el usuario está autenticado)
+            // -------------------------------------------------------
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                       ?? User.FindFirstValue("uid");
+            try
+            {
+                // Registrar vista: el servicio acepta userId nulo para vistas anónimas
+                await _svc.AddViewAsync(Id, userId, ct);
+            }
+            catch
+            {
+                // Si hay error al registrar la vista, no afecta la carga de la receta
+            }
 
 
 

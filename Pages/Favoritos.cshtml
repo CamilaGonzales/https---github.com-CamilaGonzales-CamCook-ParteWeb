@@ -1,0 +1,130 @@
+@page
+@model CamCook.Pages.FavoritosModel
+@{
+    ViewData["Title"] = "Favoritos";
+}
+
+<div class="camcook-page-bg">
+    <div class="container py-4 camcook-main">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">❤️ Mis Favoritos</h2>
+        </div>
+
+        @if (Model.Favoritos.Count == 0)
+        {
+            <div class="alert alert-info text-center">
+                <p>Aún no has agregado favoritos. ¡Dale me gusta a tus recetas favoritas desde el móvil!</p>
+                <a class="btn btn-primary" href="/">Explorar recetas</a>
+            </div>
+        }
+        else
+        {
+            <!-- GRID DE FAVORITOS -->
+            <div class="row g-4">
+                @foreach (var r in Model.Favoritos)
+                {
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <article class="camcook-recipe-card h-100 position-relative">
+
+                            <!-- Imagen -->
+                            <div class="camcook-recipe-img-wrapper">
+                                @if (!string.IsNullOrWhiteSpace(r.ImagenUrl))
+                                {
+                                    <a asp-page="/Recipes/Details"
+                                       asp-route-id="@r.Id"
+                                       class="d-block">
+                                        <img src="@r.ImagenUrl"
+                                             alt="@r.Titulo"
+                                             class="camcook-recipe-img" />
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a asp-page="/Recipes/Details"
+                                       asp-route-id="@r.Id"
+                                       class="camcook-recipe-img-placeholder d-flex align-items-center justify-content-center text-decoration-none">
+                                        Sin imagen
+                                    </a>
+                                }
+                            </div>
+
+                            <div class="p-3">
+
+                                <!-- Título clickeable -->
+                                <h5 class="fw-semibold mb-2">
+                                    <a asp-page="/Recipes/Details"
+                                       asp-route-id="@r.Id"
+                                       class="text-decoration-none text-dark">
+                                        @r.Titulo
+                                    </a>
+                                </h5>
+
+                                <!-- Descripción -->
+                                <p class="camcook-recipe-excerpt mb-3">
+                                    @r.Descripcion
+                                </p>
+
+                                <!-- METADATOS -->
+                                <div class="d-flex flex-wrap gap-2 mb-3 camcook-recipe-meta">
+                                    @if (!string.IsNullOrWhiteSpace(r.TiempoPrep))
+                                    {
+                                        <span class="camcook-chip-time">
+                                            ⏱️ @r.TiempoPrep
+                                        </span>
+                                    }
+
+                                    @if (r.Porciones != null && r.Porciones > 0)
+                                    {
+                                        <span class="camcook-chip-time">
+                                            🍽️ @r.Porciones porciones
+                                        </span>
+                                    }
+
+                                    @if (r.Calorias != null)
+                                    {
+                                        <span class="camcook-chip-time">
+                                            🔥 @(r.Calorias ?? 0) kcal
+                                        </span>
+                                    }
+
+                                    @* vistas removidas del metadata en Favoritos *@
+                                </div>
+
+                            </div>
+                        </article>
+                    </div>
+                }
+            </div>
+
+            <!-- PAGINACIÓN -->
+            @if (Model.TotalPages > 1)
+            {
+                <nav aria-label="Paginación favoritos" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                            <a class="page-link" asp-page="/Favoritos" asp-route-page="@(Model.Page - 1)">Anterior</a>
+                        </li>
+
+                        @for (int p = 1; p <= Model.TotalPages; p++)
+                        {
+                            if (p == Model.Page)
+                            {
+                                <li class="page-item active"><span class="page-link">@p</span></li>
+                            }
+                            else
+                            {
+                                <li class="page-item"><a class="page-link" asp-page="/Favoritos" asp-route-page="@p">@p</a></li>
+                            }
+                        }
+
+                        <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                            <a class="page-link" asp-page="/Favoritos" asp-route-page="@(Model.Page + 1)">Siguiente</a>
+                        </li>
+                    </ul>
+                </nav>
+            }
+        }
+
+    </div>
+</div>

@@ -30,14 +30,14 @@ namespace CamCook.Pages.Recipes
             return Page();
         }
 
-        // ?? BOT”N "Guardar" (borrador)
+        // ?? BOTÔøΩN "Guardar" (borrador)
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> OnPostGuardarAsync(CancellationToken ct)
         {
             return await CrearRecetaInternoAsync(ct, esBorrador: true);
         }
          
-        // BOT”N "Mandar a revisar"
+        // BOTÔøΩN "Mandar a revisar"
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> OnPostEnviarAsync(CancellationToken ct)
         {
@@ -46,11 +46,18 @@ namespace CamCook.Pages.Recipes
 
         // ELIMINA tu antiguo OnPostAsync, ya no se usa
 
-        // L”GICA COMPARTIDA
+        // L√ìGICA COMPARTIDA
         private async Task<IActionResult> CrearRecetaInternoAsync(CancellationToken ct, bool esBorrador)
         {
             if (!(User?.Identity?.IsAuthenticated ?? false))
                 return RedirectToPage("/Account/Login");
+
+            // Validaci√≥n para borrador: el t√≠tulo es obligatorio
+            if (esBorrador && string.IsNullOrWhiteSpace(Input.Title))
+            {
+                ModelState.AddModelError(nameof(Input.Title), "El t√≠tulo es obligatorio incluso para guardar como borrador.");
+                return Page();
+            }
 
             if (!ModelState.IsValid && !esBorrador)
                 return Page();
@@ -82,15 +89,24 @@ namespace CamCook.Pages.Recipes
 
                 if (esBorrador)
                 {
-                    // ?? Guardar como borrador
+                    // Guardar como borrador siempre (incluso si hay validaciones pendientes)
                     id = await _repo.CreateDraftAsync(Input, ct);
-                    TempData["ok"] = "Receta guardada como borrador. Puedes editarla o enviarla a revisiÛn cuando quieras.";
+
+                    // Si el modelo no es v√°lido, queremos que el usuario vea las validaciones
+                    // pero igualmente guardamos el borrador. En ese caso, permanecemos en la p√°gina.
+                    if (!ModelState.IsValid)
+                    {
+                        TempData["ok"] = "Receta guardada como borrador. Atenci√≥n: hay validaciones pendientes que deben revisarse antes de enviar a revisi√≥n.";
+                        return Page();
+                    }
+
+                    TempData["ok"] = "Receta guardada como borrador. Puedes editarla o enviarla a revisi√≥n cuando quieras.";
                 }
                 else
                 {
-                    // ?? Enviar a revisiÛn (flujo normal)
+                    // Enviar a revisi√≥n (flujo normal) ‚Äî requiere modelo v√°lido (ya chequeado arriba)
                     id = await _repo.CreateAsync(Input, ct);
-                    TempData["ok"] = "Receta enviada a revisiÛn. Te avisaremos cuando se publique.";
+                    TempData["ok"] = "Receta enviada a revisi√≥n. Te avisaremos cuando se publique.";
                 }
 
                 return RedirectToPage("/Recipes/List");
@@ -102,7 +118,7 @@ namespace CamCook.Pages.Recipes
             catch (Exception ex)
             {
                 _log.LogError(ex, "Error creando receta");
-                ModelState.AddModelError(string.Empty, "OcurriÛ un error al crear la receta. Intenta nuevamente.");
+                ModelState.AddModelError(string.Empty, "OcurriÔøΩ un error al crear la receta. Intenta nuevamente.");
                 return Page();
             }
         }
