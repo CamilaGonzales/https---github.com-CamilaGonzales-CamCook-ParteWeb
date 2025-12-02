@@ -7,6 +7,7 @@ using System.Security.Claims;
 
 namespace CamCook.Pages.Recipes;
 
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public class ListModel : PageModel
 {
     private readonly RecetaService _svc;
@@ -101,7 +102,7 @@ public class ListModel : PageModel
             .Select(x => _svc.MapToVm(x, currentUid))
             .ToList();
 
-        // 2) Borradores del usuario actual (aquí debes usar un método de servicio)
+        // 2) Borradores del usuario actual (aquï¿½ debes usar un mï¿½todo de servicio)
         if (!string.IsNullOrWhiteSpace(currentUid))
         {
             var borradores = await _svc.ObtenerPorAutorYEstadoAsync(currentUid, "borrador");

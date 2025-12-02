@@ -15,24 +15,41 @@
             </a>
         </div>
 
-        <!-- BUSCADOR (opcional) -->
-        <form method="get" class="camcook-search-area mb-4">
-            <div class="camcook-search-input-wrapper">
-                <i class="fa fa-search camcook-search-icon"></i>
-                <input type="text"
-                       name="Search"
-                       value="@Model.Search"
-                       class="form-control camcook-search-input"
-                       placeholder="Buscar en mis recetas...">
+        <!-- FILTROS Y BUSCADOR -->
+        <form method="get" class="mb-4">
+            <div class="d-flex gap-2 mb-3">
+                <a class="btn @(Model.Estado != "borrador" ? "btn-primary" : "btn-outline-primary")"
+                   asp-page="/Recipes/MyRecipes"
+                   asp-route-search="@Model.Search"
+                   asp-route-estado="">
+                    Todas
+                </a>
+                <a class="btn @(Model.Estado == "borrador" ? "btn-warning" : "btn-outline-warning")"
+                   asp-page="/Recipes/MyRecipes"
+                   asp-route-search="@Model.Search"
+                   asp-route-estado="borrador">
+                    📝 Borradores
+                </a>
             </div>
-            <button class="btn camcook-search-btn">Buscar</button>
+
+            <div class="camcook-search-area">
+                <div class="camcook-search-input-wrapper">
+                    <i class="fa fa-search camcook-search-icon"></i>
+                    <input type="text"
+                           name="Search"
+                           value="@Model.Search"
+                           class="form-control camcook-search-input"
+                           placeholder="Buscar en mis recetas...">
+                </div>
+                <button class="btn camcook-search-btn">Buscar</button>
+            </div>
         </form>
 
         <!-- GRID DE MIS RECETAS -->
         <div class="row g-4">
             @foreach (var r in Model.Recetas)
             {
-                <div class="col-12 col-sm-6 col-lg-4">
+                <div class="col-12 col-sm-6 col-md-3">
                     <article class="camcook-recipe-card h-100">
 
                         <!-- Imagen -->
@@ -74,6 +91,20 @@
 
                             <!-- METADATOS -->
                             <div class="d-flex flex-wrap gap-2 mb-3 camcook-recipe-meta">
+                                @if (!string.IsNullOrWhiteSpace(r.TiempoPrep))
+                                {
+                                    <span class="camcook-chip-time">
+                                        ⏱️ @r.TiempoPrep
+                                    </span>
+                                }
+
+                                @if (r.Porciones != null && r.Porciones > 0)
+                                {
+                                    <span class="camcook-chip-time">
+                                        🍽️ @r.Porciones porciones
+                                    </span>
+                                }
+
                                 @if (r.Calorias != null)
                                 {
                                     <span class="camcook-chip-time">
@@ -123,6 +154,34 @@
                 </div>
             }
         </div>
+
+        <!-- PAGINACIÓN -->
+        @if (Model.TotalPages > 1)
+        {
+            <nav aria-label="Paginación mis recetas" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                        <a class="page-link" asp-page="/Recipes/MyRecipes" asp-route-search="@Model.Search" asp-route-estado="@Model.Estado" asp-route-page="@(Model.Page - 1)">Anterior</a>
+                    </li>
+
+                    @for (int p = 1; p <= Model.TotalPages; p++)
+                    {
+                        if (p == Model.Page)
+                        {
+                            <li class="page-item active"><span class="page-link">@p</span></li>
+                        }
+                        else
+                        {
+                            <li class="page-item"><a class="page-link" asp-page="/Recipes/MyRecipes" asp-route-search="@Model.Search" asp-route-estado="@Model.Estado" asp-route-page="@p">@p</a></li>
+                        }
+                    }
+
+                    <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                        <a class="page-link" asp-page="/Recipes/MyRecipes" asp-route-search="@Model.Search" asp-route-estado="@Model.Estado" asp-route-page="@(Model.Page + 1)">Siguiente</a>
+                    </li>
+                </ul>
+            </nav>
+        }
 
     </div>
 </div>

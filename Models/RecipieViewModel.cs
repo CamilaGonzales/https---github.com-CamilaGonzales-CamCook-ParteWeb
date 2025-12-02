@@ -11,6 +11,8 @@
         public int? Calorias { get; set; }
         public int? Likes { get; set; }
         public int? Views { get; set; }
+        public int? Porciones { get; set; }
+        public string? TiempoPrep { get; set; }
 
         public string? Autor { get; set; }
         public string? AutorUid { get; set; }

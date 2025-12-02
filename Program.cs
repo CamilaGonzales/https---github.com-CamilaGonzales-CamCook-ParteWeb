@@ -9,7 +9,7 @@ using FirebaseAdmin;
 var builder = WebApplication.CreateBuilder(args);
 
 // =====================================================
-// === Configuración de Google / Firestore / Firebase ===
+// === Configuraciï¿½n de Google / Firestore / Firebase ===
 // =====================================================
 var projectId = builder.Configuration["Google:ProjectId"]
     ?? throw new InvalidOperationException("Falta Google:ProjectId en appsettings.");
@@ -51,7 +51,7 @@ if (FirebaseApp.DefaultInstance == null)
 }
 
 // =====================================================
-//  Límites de Kestrel, formularios y JSON
+//  Lï¿½mites de Kestrel, formularios y JSON
 // =====================================================
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -90,7 +90,7 @@ builder.Services.AddRazorPages();
 builder.Services.AddControllers();
 
 // =====================================================
-//  Autenticación con Cookies
+//  Autenticaciï¿½n con Cookies
 // =====================================================
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
@@ -102,7 +102,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 
 // =====================================================
-//  Construcción de la app
+//  Construcciï¿½n de la app
 // =====================================================
 var app = builder.Build();
 
@@ -117,6 +117,13 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+// AÃ±adir cabeceras de seguridad bÃ¡sicas (CSP) para mitigar XSS
+app.Use(async (context, next) =>
+{
+    // PolÃ­tica conservadora: modifica segÃºn recursos externos usados en tu app
+    context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https:; frame-ancestors 'none';";
+    await next();
+});
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -124,10 +131,10 @@ app.UseAuthorization();
 app.MapRazorPages();
 app.MapControllers();
 
-// Redirección raíz
+// Redirecciï¿½n raï¿½z: abrir la landing principal
 app.MapGet("/", context =>
 {
-    context.Response.Redirect("/Recipes/List");
+    context.Response.Redirect("/Index");
     return Task.CompletedTask;
 });
 

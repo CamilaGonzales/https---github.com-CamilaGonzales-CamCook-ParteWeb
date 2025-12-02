@@ -7,27 +7,43 @@
 
 @functions {
     // Resalta las palabras encontradas dentro del texto usando <mark>
+    // Primero escapamos todo el texto para evitar XSS, luego insertamos <mark> alrededor
+    // de las palabras buscadas sobre la versión escapada.
     public string ResaltarPalabras(string texto, List<string> palabras)
     {
-        if (string.IsNullOrWhiteSpace(texto) || palabras == null || palabras.Count == 0)
-            return texto;
+        if (texto == null) texto = string.Empty;
+        if (palabras == null || palabras.Count == 0)
+            return System.Text.Encodings.Web.HtmlEncoder.Default.Encode(texto);
 
-        var patrones = palabras
+        // Escapamos el texto completo
+        var encoded = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(texto);
+
+        var distinct = palabras
             .Where(p => !string.IsNullOrWhiteSpace(p))
-            .Select(p => Regex.Escape(p.Trim()))
+            .Select(p => p.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        if (patrones.Count == 0)
-            return texto;
+        if (distinct.Count == 0)
+            return encoded;
 
-        var pattern = string.Join("|", patrones);
+        // Para cada palabra, escapamos también y reemplazamos en la versión escapada
+        foreach (var palabra in distinct)
+        {
+            var encodedPal = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(palabra);
+            if (string.IsNullOrEmpty(encodedPal)) continue;
 
-        return Regex.Replace(
-            texto,
-            pattern,
-            m => $"<mark>{m.Value}</mark>",
-            RegexOptions.IgnoreCase
-        );
+            try
+            {
+                encoded = Regex.Replace(encoded, Regex.Escape(encodedPal), m => $"<mark>{m.Value}</mark>", RegexOptions.IgnoreCase);
+            }
+            catch
+            {
+                // en caso de error con la regex, ignoramos y seguimos con la siguiente
+            }
+        }
+
+        return encoded;
     }
 }
 

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CamCook.Services;
 using System.Text.RegularExpressions;
+using System.Text.Encodings.Web;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -119,7 +120,7 @@ namespace CamCook.Services
                         pasosEs.Add(new Dictionary<string, object?>
                         {
                             ["orden"] = i,
-                            ["descripcion"] = s.Description?.Trim(),
+                            ["descripcion"] = HtmlEncoder.Default.Encode(s.Description?.Trim() ?? string.Empty),
                             ["imagenUrl"] = stepUrl
                         });
                     }
@@ -128,9 +129,9 @@ namespace CamCook.Services
                 // Ingredientes
                 var ingredientesEs = input.Ingredients?.Select(i => new Dictionary<string, object?>
                 {
-                    ["nombre"] = i.Name,
-                    ["cantidad"] = i.Quantity,
-                    ["unidad"] = i.Unit
+                    ["nombre"] = HtmlEncoder.Default.Encode(i.Name ?? string.Empty),
+                    ["cantidad"] = HtmlEncoder.Default.Encode(i.Quantity ?? string.Empty),
+                    ["unidad"] = HtmlEncoder.Default.Encode(i.Unit ?? string.Empty)
                 }).ToList();
 
                 // ===================== IA: Analizar contenido =====================
@@ -190,7 +191,7 @@ namespace CamCook.Services
 
                 var docData = new Dictionary<string, object?>
                 {
-                    ["titulo"] = input.Title?.Trim(),
+                    ["titulo"] = HtmlEncoder.Default.Encode(input.Title?.Trim() ?? string.Empty),
                     ["calorias"] = input.Calories,
                     ["porciones"] = input.Servings,
                     ["tiempoPrep"] = input.PrepTimeText,
@@ -206,7 +207,7 @@ namespace CamCook.Services
                     // Contenido
                     ["ingredientes"] = ingredientesEs ?? new List<Dictionary<string, object?>>(),
                     ["pasos"] = pasosEs ?? new List<Dictionary<string, object?>>(),
-                    ["descripcion"] = descripcionPlano,  // usado en la vista de moderación
+                    ["descripcion"] = HtmlEncoder.Default.Encode(descripcionPlano),  // usado en la vista de moderación
 
                     // IA y estado
                     ["ai"] = aiDict,
@@ -323,7 +324,7 @@ namespace CamCook.Services
                     pasosEs.Add(new Dictionary<string, object?>
                     {
                         ["orden"] = s.Order,
-                        ["descripcion"] = s.Description?.Trim(),
+                        ["descripcion"] = HtmlEncoder.Default.Encode(s.Description?.Trim() ?? string.Empty),
                         ["imagenUrl"] = stepUrl
                     });
                 }
@@ -332,16 +333,16 @@ namespace CamCook.Services
             // --- Ingredientes ---
             var ingredientesEs = input.Ingredients?.Select(i => new Dictionary<string, object?>
             {
-                ["nombre"] = i.Name,
-                ["cantidad"] = i.Quantity,
-                ["unidad"] = i.Unit
+                ["nombre"] = HtmlEncoder.Default.Encode(i.Name ?? string.Empty),
+                ["cantidad"] = HtmlEncoder.Default.Encode(i.Quantity ?? string.Empty),
+                ["unidad"] = HtmlEncoder.Default.Encode(i.Unit ?? string.Empty)
             }).ToList();
 
             var nowTs = Timestamp.FromDateTime(DateTime.UtcNow);
 
             var updateData = new Dictionary<string, object?>
             {
-                ["titulo"] = input.Title,
+                ["titulo"] = HtmlEncoder.Default.Encode(input.Title ?? string.Empty),
                 ["calorias"] = input.Calories,
                 ["porciones"] = input.Servings,
                 ["tiempoPrep"] = input.PrepTimeText,

@@ -71,6 +71,11 @@ else
                                     <span class="camcook-chip">🍽️ @Model.Porciones porciones</span>
                                 }
 
+                                @if (!string.IsNullOrWhiteSpace(Model.PrepTime))
+                                {
+                                    <span class="camcook-chip">⏱️ @Model.PrepTime</span>
+                                }
+
                                 @if (Model.Views != null)
                                 {
                                     <span class="camcook-chip">👁️ @Model.Views vistas</span>

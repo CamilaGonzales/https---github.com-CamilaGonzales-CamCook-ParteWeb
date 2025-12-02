@@ -24,7 +24,7 @@ namespace CamCook.Pages.Recipes
         }
 
         // -------------------------------------------------------
-        // Parámetros de entrada
+        // Parï¿½metros de entrada
         // -------------------------------------------------------
         [BindProperty(SupportsGet = true)]
         public string Id { get; set; } = string.Empty;
@@ -46,6 +46,7 @@ namespace CamCook.Pages.Recipes
         public int? Porciones { get; private set; }
         public int? Likes { get; private set; }
         public int? Views { get; private set; }
+        public string? PrepTime { get; private set; }
 
         public DateTime? CreadoEn { get; private set; }
         public DateTime? ActualizadoEn { get; private set; }
@@ -65,7 +66,7 @@ namespace CamCook.Pages.Recipes
         public List<StepVm> Steps { get; } = new();
 
         // -------------------------------------------------------
-        // Prev / Next solo si hay IDs de búsqueda
+        // Prev / Next solo si hay IDs de bï¿½squeda
         // -------------------------------------------------------
         public string? PrevId { get; private set; }
         public string? NextId { get; private set; }
@@ -74,15 +75,15 @@ namespace CamCook.Pages.Recipes
         private List<string> IdsBusqueda { get; set; } = new();
 
         // -------------------------------------------------------
-        // Lógica principal
+        // Lï¿½gica principal
         // -------------------------------------------------------
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(Id))
-                return NotFound("ID de receta inválido.");
+                return NotFound("ID de receta invï¿½lido.");
 
             // -------------------------------------------------------
-            // Si vienen IDs de búsqueda
+            // Si vienen IDs de bï¿½squeda
             // -------------------------------------------------------
             if (!string.IsNullOrWhiteSpace(Ids))
                 IdsBusqueda = Ids.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
@@ -114,15 +115,16 @@ namespace CamCook.Pages.Recipes
             Porciones = IntFromDoc(Doc, "porciones");
             Likes = IntFromDoc(Doc, "likes");
             Views = IntFromDoc(Doc, "views");
+            PrepTime = FirstNonEmpty(Doc, "tiempoPrep");
 
             Estado = FirstNonEmpty(Doc, "estado");
             Publicada = Doc.ContainsKey("publicada") ? Doc["publicada"] as bool? : null;
             NeedsModeration = Doc.ContainsKey("needsModeration") ? Doc["needsModeration"] as bool? : null;
 
-            // Timestamps
-            CreadoEn = Doc["creadoEn"] as Timestamp? != null ? ((Timestamp)Doc["creadoEn"]).ToDateTime() : null;
-            ActualizadoEn = Doc["actualizadoEn"] as Timestamp? != null ? ((Timestamp)Doc["actualizadoEn"]).ToDateTime() : null;
-            PublicadoEn = Doc["publicadoEn"] as Timestamp? != null ? ((Timestamp)Doc["publicadoEn"]).ToDateTime() : null;
+            // Timestamps - con verificaciÃ³n de existencia
+            CreadoEn = Doc.ContainsKey("creadoEn") && Doc["creadoEn"] as Timestamp? != null ? ((Timestamp)Doc["creadoEn"]).ToDateTime() : null;
+            ActualizadoEn = Doc.ContainsKey("actualizadoEn") && Doc["actualizadoEn"] as Timestamp? != null ? ((Timestamp)Doc["actualizadoEn"]).ToDateTime() : null;
+            PublicadoEn = Doc.ContainsKey("publicadoEn") && Doc["publicadoEn"] as Timestamp? != null ? ((Timestamp)Doc["publicadoEn"]).ToDateTime() : null;
 
             // Maps
             LikedBy = Doc.TryGetValue("liked_by", out var lb) ? lb as IDictionary<string, object> : null;

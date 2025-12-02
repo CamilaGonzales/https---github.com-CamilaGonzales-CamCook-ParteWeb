@@ -9,18 +9,39 @@
 
         <!-- Encabezado -->
         <div class="text-center mb-4">
-            <img src="~/img/logo.png" alt="CamCook Logo" class="logo mb-2" />
-            <h1>Bienvenido a CamCook</h1>
+            <h1 id="greeting">@Model.Saludo@(User.Identity?.IsAuthenticated ?? false ? $", {Model.NombreUsuario}" : "")</h1>
             <p class="text-muted">
                 Explora las recetas de la comunidad 🍽️
             </p>
+        </div>
+
+        <!-- BUSCADOR Y BOTÓN CREAR (si está autenticado) -->
+        <div class="d-flex justify-content-between align-items-center gap-2 mb-4">
+            <form method="get" class="camcook-search-area flex-grow-1">
+                <div class="camcook-search-input-wrapper">
+                    <i class="fa fa-search camcook-search-icon"></i>
+                    <input type="text"
+                           name="Search"
+                           value="@Model.Search"
+                           class="form-control camcook-search-input"
+                           placeholder="Buscar recetas...">
+                </div>
+                <button class="btn camcook-search-btn">Buscar</button>
+            </form>
+
+            @if (User.Identity?.IsAuthenticated ?? false)
+            {
+                <a class="btn btn-success" asp-page="/Recipes/Create">
+                    + Crear Receta
+                </a>
+            }
         </div>
 
         <!-- GRID DE RECETAS (todas las publicadas) -->
         <div class="row g-4">
             @foreach (var r in Model.Recetas)
             {
-                <div class="col-12 col-sm-6 col-lg-4">
+                <div class="col-12 col-sm-6 col-md-3">
                     <!-- Toda la tarjeta es clickeable y lleva a Details -->
                     <a class="text-decoration-none text-dark"
                        asp-page="/Recipes/Details"
@@ -56,6 +77,20 @@
 
                                 <!-- METADATOS (solo informativos) -->
                                 <div class="d-flex flex-wrap gap-2 camcook-recipe-meta">
+                                    @if (!string.IsNullOrWhiteSpace(r.TiempoPrep))
+                                    {
+                                        <span class="camcook-chip-time">
+                                            ⏱️ @r.TiempoPrep
+                                        </span>
+                                    }
+
+                                    @if (r.Porciones != null && r.Porciones > 0)
+                                    {
+                                        <span class="camcook-chip-time">
+                                            🍽️ @r.Porciones porciones
+                                        </span>
+                                    }
+
                                     @if (r.Calorias != null)
                                     {
                                         <span class="camcook-chip-time">
@@ -73,7 +108,7 @@
                                     @if (r.Views != null)
                                     {
                                         <span class="camcook-chip-time">
-                                            👁 @(r.Views ?? 0)
+                                            👁️ @(r.Views ?? 0)
                                         </span>
                                     }
 
@@ -92,5 +127,61 @@
             }
         </div>
 
+        <!-- PAGINACIÓN -->
+        @if (Model.TotalPages > 1)
+        {
+            <nav aria-label="Paginación recetas" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                        <a class="page-link" asp-page="/Index" asp-route-search="@Model.Search" asp-route-page="@(Model.Page - 1)">Anterior</a>
+                    </li>
+
+                    @for (int p = 1; p <= Model.TotalPages; p++)
+                    {
+                        if (p == Model.Page)
+                        {
+                            <li class="page-item active"><span class="page-link">@p</span></li>
+                        }
+                        else
+                        {
+                            <li class="page-item"><a class="page-link" asp-page="/Index" asp-route-search="@Model.Search" asp-route-page="@p">@p</a></li>
+                        }
+                    }
+
+                    <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                        <a class="page-link" asp-page="/Index" asp-route-search="@Model.Search" asp-route-page="@(Model.Page + 1)">Siguiente</a>
+                    </li>
+                </ul>
+            </nav>
+        }
+
     </div>
 </div>
+
+    @section Scripts {
+        <script>
+            // Saludo calculado en el cliente usando la hora local del navegador
+            (function () {
+                try {
+                    var name = @System.Text.Json.JsonSerializer.Serialize(Model.NombreUsuario ?? "");
+                } catch (e) {
+                    var name = "";
+                }
+
+                function computeGreeting(hour) {
+                    if (hour >= 5 && hour < 12) return 'Buenos días';
+                    if (hour >= 12 && hour < 18) return 'Buenas tardes';
+                    return 'Buenas noches';
+                }
+
+                var now = new Date();
+                var greeting = computeGreeting(now.getHours());
+                var displayName = (name && name !== '""') ? JSON.parse(name) : '';
+
+                var el = document.getElementById('greeting');
+                if (el) {
+                    el.textContent = greeting + (displayName ? ', ' + displayName : '');
+                }
+            })();
+        </script>
+    }

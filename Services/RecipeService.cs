@@ -370,6 +370,11 @@ public class RecetaService
 
         dict.TryGetValue("estado", out var estadoObj);
         dict.TryGetValue("pasos", out var pasosObj);
+        dict.TryGetValue("calorias", out var caloriasObj);
+        dict.TryGetValue("porciones", out var porcionesObj);
+        dict.TryGetValue("tiempoPrep", out var tiempoPrepObj);
+        dict.TryGetValue("likes", out var likesObj);
+        dict.TryGetValue("views", out var viewsObj);
 
         string? id = idObj?.ToString();
         string? titulo = tituloObj?.ToString();
@@ -378,6 +383,41 @@ public class RecetaService
         string? autorUid = autorUidObj?.ToString();
         string? autorEmail = autorEmailObj?.ToString();
         string? estado = estadoObj?.ToString();
+
+        // Parsear números
+        int? calorias = null;
+        if (caloriasObj != null)
+        {
+            if (caloriasObj is int cInt) calorias = cInt;
+            else if (caloriasObj is long cLong) calorias = (int)cLong;
+            else if (int.TryParse(caloriasObj.ToString(), out var cParse)) calorias = cParse;
+        }
+
+        int? porciones = null;
+        if (porcionesObj != null)
+        {
+            if (porcionesObj is int pInt) porciones = pInt;
+            else if (porcionesObj is long pLong) porciones = (int)pLong;
+            else if (int.TryParse(porcionesObj.ToString(), out var pParse)) porciones = pParse;
+        }
+
+        int? likes = null;
+        if (likesObj != null)
+        {
+            if (likesObj is int lInt) likes = lInt;
+            else if (likesObj is long lLong) likes = (int)lLong;
+            else if (int.TryParse(likesObj.ToString(), out var lParse)) likes = lParse;
+        }
+
+        int? views = null;
+        if (viewsObj != null)
+        {
+            if (viewsObj is int vInt) views = vInt;
+            else if (viewsObj is long vLong) views = (int)vLong;
+            else if (int.TryParse(viewsObj.ToString(), out var vParse)) views = vParse;
+        }
+
+        string? tiempoPrep = tiempoPrepObj?.ToString();
 
         // fallback: primera imagen de los pasos
         if (string.IsNullOrWhiteSpace(imagenUrl) && pasosObj is IEnumerable<object> pasos)
@@ -405,7 +445,12 @@ public class RecetaService
             ImagenUrl = imagenUrl,
             Autor = autorEmail,       // Nombre o email del autor
             AutorUid = autorUid,      // Muy importante: para la condición en la vista
-            Publicado = estado == "publicada"
+            Publicado = estado == "publicada",
+            Calorias = calorias,
+            Porciones = porciones,
+            Likes = likes,
+            Views = views,
+            TiempoPrep = tiempoPrep
         };
 
         // AQUÍ está lo que me pediste, adaptado al dict
