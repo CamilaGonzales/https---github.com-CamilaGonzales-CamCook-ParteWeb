@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
+using System.Net;
 
 namespace CamCook.Services;
 
@@ -44,6 +45,10 @@ public static class AnalizadorIA
         double score = 1.0;
         var flags = new List<string>();
 
+        // Decodificar entidades HTML si existen y luego normalizar
+        titulo = WebUtility.HtmlDecode(titulo ?? string.Empty);
+        descripcionCompuesta = WebUtility.HtmlDecode(descripcionCompuesta ?? string.Empty);
+
         titulo = NormalizeLite(titulo);
         var desc = NormalizeLite(descripcionCompuesta);
         var texto = $"{titulo} {desc}";
@@ -70,32 +75,37 @@ public static class AnalizadorIA
         { score -= 0.10; flags.Add("MAYÚSCULAS excesivas"); }
 
         // Vulgaridades + ilegales
-        // Mejora: normalizamos a minúsculas y tokenizamos solo letras/dígitos para detectar variantes
-        var simple = Regex.Replace(texto.ToLowerInvariant(), "[^a-z0-9s]", " ");
-        var tokens = simple.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+        // Mejora: normalizamos y extraemos tokens unicode (palabras) para detectar variantes y palabras con tildes
+        var lowered = texto.ToLowerInvariant();
+        // Extraer secuencias de letras/dígitos (incluye "+" y caracteres unicode) como tokens
+        var matches = Regex.Matches(lowered, "\\p{L}[\\p{L}\\p{N}]*", RegexOptions.Compiled);
+        var tokens = matches.Cast<Match>().Select(m => m.Value).ToList();
 
         var foundVulgar = new List<string>();
         var foundIlegal = new List<string>();
 
-        // Buscar coincidencias directas en tokens
+        // Buscar coincidencias directas o por substring en tokens
         foreach (var w in Vulgaridades)
         {
-            if (tokens.Contains(w.ToLowerInvariant())) foundVulgar.Add(w);
+            var lw = w.ToLowerInvariant();
+            if (tokens.Any(t => t == lw || t.Contains(lw))) foundVulgar.Add(w);
         }
 
         foreach (var w in Ilegales)
         {
-            if (tokens.Contains(w.ToLowerInvariant())) foundIlegal.Add(w);
+            var lw = w.ToLowerInvariant();
+            if (tokens.Any(t => t == lw || t.Contains(lw))) foundIlegal.Add(w);
         }
 
-        // Buscar pares ofensivos adyacentes (ej. "puto idiota") o si aparecen como dos tokens cercanos
+        // Buscar pares ofensivos adyacentes (ej. "puto idiota")
         if (foundVulgar.Count == 0)
         {
             for (int i = 0; i < tokens.Count - 1; i++)
             {
                 var a = tokens[i];
                 var b = tokens[i + 1];
-                if (Vulgaridades.Contains(a) && Vulgaridades.Contains(b))
+                if (Vulgaridades.Any(v => v.Equals(a, StringComparison.OrdinalIgnoreCase)) &&
+                    Vulgaridades.Any(v => v.Equals(b, StringComparison.OrdinalIgnoreCase)))
                 {
                     if (!foundVulgar.Contains(a)) foundVulgar.Add(a);
                     if (!foundVulgar.Contains(b)) foundVulgar.Add(b);

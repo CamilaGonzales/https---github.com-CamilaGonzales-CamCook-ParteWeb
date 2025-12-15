@@ -35,7 +35,7 @@
                onblur="cleanTextAndCapitalize(this)" />
 
         <label class="form-label mt-2">Imagen final del plato</label>
-        <input asp-for="Input.MainImage" type="file" class="form-control" />
+        <input asp-for="Input.MainImage" type="file" accept="image/*" class="form-control" />
     </fieldset>
 
     <hr />
@@ -94,7 +94,7 @@
             </div>
 
             <div class="col-md-3">
-                <input type="file" class="form-control"
+                <input type="file" accept="image/*" class="form-control"
                        name="Input.Steps[0].Image" />
             </div>
 
@@ -329,6 +329,15 @@
         // ==========================================================
         // 🔹 VALIDACIÓN FINAL ANTES DE ENVIAR
         // ==========================================================
+        function isValidImageFile(file) {
+            if (!file) return true;
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (file.type && allowedTypes.includes(file.type.toLowerCase())) return true;
+            const name = file.name || '';
+            const ext = name.split('.').pop().toLowerCase();
+            return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+        }
+
         const form = document.querySelector('form');
         const titleInput = document.querySelector('input[name="Input.Title"]');
 
@@ -365,6 +374,37 @@
                 alert("Las porciones deben ser mayores a 0.");
                 e.preventDefault();
                 return;
+            }
+
+            // Validar archivos de imagen (main + pasos)
+            const mainFileInput = document.querySelector('input[name="Input.MainImage"]');
+            if (mainFileInput && mainFileInput.files && mainFileInput.files.length > 0) {
+                const f = mainFileInput.files[0];
+                if (!isValidImageFile(f)) {
+                    Swal.fire({
+                        title: 'Imagen no aceptada',
+                        text: 'Solo se permiten imágenes (jpg, png, gif, webp).',
+                        icon: 'error'
+                    });
+                    e.preventDefault();
+                    return;
+                }
+            }
+
+            const stepFileInputs = document.querySelectorAll('#steps input[type="file"]');
+            for (const inp of stepFileInputs) {
+                if (inp.files && inp.files.length > 0) {
+                    const sf = inp.files[0];
+                    if (!isValidImageFile(sf)) {
+                        Swal.fire({
+                            title: 'Imagen no aceptada',
+                            text: 'Uno de los archivos de paso no es una imagen válida.',
+                            icon: 'error'
+                        });
+                        e.preventDefault();
+                        return;
+                    }
+                }
             }
 
             // Si todo está bien, los datos ya están limpios y listos para Firebase

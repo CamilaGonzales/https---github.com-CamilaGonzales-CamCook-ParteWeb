@@ -6,6 +6,7 @@ using System.Linq;
 using CamCook.Services;
 using System.Text.RegularExpressions;
 using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -74,6 +75,17 @@ namespace CamCook.Services
             _imgStore = imgStore;
         }
 
+        private static bool IsValidImage(IFormFile? file)
+        {
+            if (file == null) return true;
+            if (file.Length == 0) return true;
+            var ct = (file.ContentType ?? "").ToLowerInvariant();
+            if (ct.StartsWith("image/")) return true;
+            var name = file.FileName ?? string.Empty;
+            var ext = name.Contains('.') ? name.Split('.').Last().ToLowerInvariant() : string.Empty;
+            return ext is "jpg" or "jpeg" or "png" or "gif" or "webp";
+        }
+
         // === CREATE ===
         public async Task<string> CreateAsync(RecipeInput input, CancellationToken ct = default)
         {
@@ -86,6 +98,8 @@ namespace CamCook.Services
                 {
                     try
                     {
+                        if (!IsValidImage(input.MainImage))
+                            throw new ArgumentException("Imagen no aceptada");
                         mainUrl = await _imgStore.SaveAsync(input.MainImage, ct);
                     }
                     catch (Exception imgEx)
@@ -108,6 +122,8 @@ namespace CamCook.Services
                         {
                             try
                             {
+                                if (!IsValidImage(s.Image))
+                                    throw new ArgumentException("Imagen no aceptada");
                                 stepUrl = await _imgStore.SaveAsync(s.Image, ct);
                             }
                             catch (Exception stepImgEx)
@@ -120,7 +136,7 @@ namespace CamCook.Services
                         pasosEs.Add(new Dictionary<string, object?>
                         {
                             ["orden"] = i,
-                            ["descripcion"] = HtmlEncoder.Default.Encode(s.Description?.Trim() ?? string.Empty),
+                            ["descripcion"] = s.Description?.Trim() ?? string.Empty,
                             ["imagenUrl"] = stepUrl
                         });
                     }
@@ -129,9 +145,9 @@ namespace CamCook.Services
                 // Ingredientes
                 var ingredientesEs = input.Ingredients?.Select(i => new Dictionary<string, object?>
                 {
-                    ["nombre"] = HtmlEncoder.Default.Encode(i.Name ?? string.Empty),
-                    ["cantidad"] = HtmlEncoder.Default.Encode(i.Quantity ?? string.Empty),
-                    ["unidad"] = HtmlEncoder.Default.Encode(i.Unit ?? string.Empty)
+                    ["nombre"] = i.Name ?? string.Empty,
+                    ["cantidad"] = i.Quantity ?? string.Empty,
+                    ["unidad"] = i.Unit ?? string.Empty
                 }).ToList();
 
                 // ===================== IA: Analizar contenido =====================
@@ -191,7 +207,7 @@ namespace CamCook.Services
 
                 var docData = new Dictionary<string, object?>
                 {
-                    ["titulo"] = HtmlEncoder.Default.Encode(input.Title?.Trim() ?? string.Empty),
+                    ["titulo"] = input.Title?.Trim() ?? string.Empty,
                     ["calorias"] = input.Calories,
                     ["porciones"] = input.Servings,
                     ["tiempoPrep"] = input.PrepTimeText,
@@ -324,7 +340,7 @@ namespace CamCook.Services
                     pasosEs.Add(new Dictionary<string, object?>
                     {
                         ["orden"] = s.Order,
-                        ["descripcion"] = HtmlEncoder.Default.Encode(s.Description?.Trim() ?? string.Empty),
+                        ["descripcion"] = s.Description?.Trim() ?? string.Empty,
                         ["imagenUrl"] = stepUrl
                     });
                 }
@@ -333,16 +349,16 @@ namespace CamCook.Services
             // --- Ingredientes ---
             var ingredientesEs = input.Ingredients?.Select(i => new Dictionary<string, object?>
             {
-                ["nombre"] = HtmlEncoder.Default.Encode(i.Name ?? string.Empty),
-                ["cantidad"] = HtmlEncoder.Default.Encode(i.Quantity ?? string.Empty),
-                ["unidad"] = HtmlEncoder.Default.Encode(i.Unit ?? string.Empty)
+                ["nombre"] = i.Name ?? string.Empty,
+                ["cantidad"] = i.Quantity ?? string.Empty,
+                ["unidad"] = i.Unit ?? string.Empty
             }).ToList();
 
             var nowTs = Timestamp.FromDateTime(DateTime.UtcNow);
 
             var updateData = new Dictionary<string, object?>
             {
-                ["titulo"] = HtmlEncoder.Default.Encode(input.Title ?? string.Empty),
+                ["titulo"] = input.Title?.Trim() ?? string.Empty,
                 ["calorias"] = input.Calories,
                 ["porciones"] = input.Servings,
                 ["tiempoPrep"] = input.PrepTimeText,
