@@ -1,0 +1,43 @@
+﻿@page
+@model CamCook.Pages.Account.RegisterModel
+@{
+    ViewData["Title"] = "Registro";
+}
+
+<h2>Registro</h2>
+
+<form method="post">
+    @Html.AntiForgeryToken()
+
+    <div>
+        <label asp-for="Input.Username">Nombre de usuario</label>
+        <input asp-for="Input.Username" />
+        <span asp-validation-for="Input.Username" class="text-danger"></span>
+    </div>
+
+    <div>
+        <label asp-for="Input.Email">Correo electrónico</label>
+        <input asp-for="Input.Email" />
+        <span asp-validation-for="Input.Email" class="text-danger"></span>
+    </div>
+
+    <div>
+        <label asp-for="Input.Password">Contraseña</label>
+        <input asp-for="Input.Password" type="password" />
+        <span asp-validation-for="Input.Password" class="text-danger"></span>
+    </div>
+
+    <div>
+        <label asp-for="Input.ConfirmPassword">Confirmar contraseña</label>
+        <input asp-for="Input.ConfirmPassword" type="password" />
+        <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+    </div>
+
+    <button type="submit">Crear cuenta</button>
+</form>
+
+<p>¿Ya tienes cuenta? <a asp-page="/Account/Login">Inicia sesión</a></p>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

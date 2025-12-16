@@ -1,0 +1,79 @@
+﻿@page
+@model CamCook.Pages.Recipes.CreateModel
+@{
+    ViewData["Title"] = "Crear Receta";
+}
+
+<h2>Crear Receta</h2>
+
+<form method="post" enctype="multipart/form-data">
+    <fieldset class="mb-3">
+        <label class="form-label">Título</label>
+        <input asp-for="Input.Title" class="form-control" />
+
+        <label class="form-label mt-2">Calorías</label>
+        <input asp-for="Input.Calories" type="number" class="form-control" />
+
+        <label class="form-label mt-2">Porciones</label>
+        <input asp-for="Input.Servings" type="number" class="form-control" />
+
+        <label class="form-label mt-2">Tiempo de preparación</label>
+        <input asp-for="Input.PrepTimeText" class="form-control" placeholder="Ej: 30 minutos" />
+
+        <label class="form-label mt-2">Imagen final del plato</label>
+        <input asp-for="Input.MainImage" type="file" class="form-control" />
+    </fieldset>
+
+    <hr />
+    <h4>Ingredientes</h4>
+    <div id="ingredients">
+        <div class="ing-row mb-2">
+            <input name="Input.Ingredients[0].Name" class="form-control mb-1" placeholder="Nombre" />
+            <input name="Input.Ingredients[0].Quantity" class="form-control mb-1" placeholder="Cantidad (2 tazas)" />
+            <input name="Input.Ingredients[0].Unit" class="form-control" placeholder="Unidad (opcional)" />
+        </div>
+    </div>
+    <button type="button" class="btn btn-secondary" onclick="addIngredient()">+ Agregar ingrediente</button>
+
+    <hr />
+    <h4>Pasos</h4>
+    <div id="steps">
+        <div class="step-row mb-2">
+            <textarea name="Input.Steps[0].Description" class="form-control mb-1" placeholder="Descripción del paso"></textarea>
+            <input name="Input.Steps[0].Image" type="file" class="form-control" />
+        </div>
+    </div>
+    <button type="button" class="btn btn-secondary" onclick="addStep()">+ Agregar paso</button>
+
+    <hr />
+    <button type="submit" class="btn btn-primary">Guardar Receta</button>
+</form>
+
+@section Scripts {
+    <script>
+        let ingIndex = 1, stepIndex = 1;
+        function addIngredient(){
+          const wrap = document.getElementById('ingredients');
+          const div = document.createElement('div');
+          div.className = 'ing-row mb-2';
+          div.innerHTML = `
+            <input name="Input.Ingredients[${ingIndex}].Name" class="form-control mb-1" placeholder="Nombre" />
+            <input name="Input.Ingredients[${ingIndex}].Quantity" class="form-control mb-1" placeholder="Cantidad" />
+            <input name="Input.Ingredients[${ingIndex}].Unit" class="form-control" placeholder="Unidad (opcional)" />
+          `;
+          wrap.appendChild(div);
+          ingIndex++;
+        }
+        function addStep(){
+          const wrap = document.getElementById('steps');
+          const div = document.createElement('div');
+          div.className = 'step-row mb-2';
+          div.innerHTML = `
+            <textarea name="Input.Steps[${stepIndex}].Description" class="form-control mb-1" placeholder="Descripción del paso"></textarea>
+            <input name="Input.Steps[${stepIndex}].Image" type="file" class="form-control" />
+          `;
+          wrap.appendChild(div);
+          stepIndex++;
+        }
+    </script>
+}

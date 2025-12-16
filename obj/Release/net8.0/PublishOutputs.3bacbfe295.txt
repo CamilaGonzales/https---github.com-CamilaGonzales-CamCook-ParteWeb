@@ -1,7 +1,0 @@
-D:\SEM_4\ProgramacionWeb\CamCook\obj\Release\net8.0\PubTmp\Out\CamCook.exe
-D:\SEM_4\ProgramacionWeb\CamCook\obj\Release\net8.0\PubTmp\Out\appsettings.Development.json
-D:\SEM_4\ProgramacionWeb\CamCook\obj\Release\net8.0\PubTmp\Out\appsettings.json
-D:\SEM_4\ProgramacionWeb\CamCook\obj\Release\net8.0\PubTmp\Out\CamCook.dll
-D:\SEM_4\ProgramacionWeb\CamCook\obj\Release\net8.0\PubTmp\Out\CamCook.deps.json
-D:\SEM_4\ProgramacionWeb\CamCook\obj\Release\net8.0\PubTmp\Out\CamCook.runtimeconfig.json
-D:\SEM_4\ProgramacionWeb\CamCook\obj\Release\net8.0\PubTmp\Out\CamCook.pdb
