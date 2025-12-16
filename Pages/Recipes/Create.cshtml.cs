@@ -52,6 +52,16 @@ namespace CamCook.Pages.Recipes
             if (!(User?.Identity?.IsAuthenticated ?? false))
                 return RedirectToPage("/Account/Login");
 
+            var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                      ?? User.FindFirstValue("uid")
+                      ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(uid))
+            {
+                ModelState.AddModelError(string.Empty, "No se pudo determinar el UID del usuario autenticado.");
+                return Page();
+            }
+
             // Validación para borrador: el título es obligatorio
             if (esBorrador && string.IsNullOrWhiteSpace(Input.Title))
             {
@@ -59,57 +69,51 @@ namespace CamCook.Pages.Recipes
                 return Page();
             }
 
+            // Enviar a revisión requiere modelo válido
             if (!ModelState.IsValid && !esBorrador)
                 return Page();
 
+            // ✅ Bloquear recetas duplicadas por título (por usuario)
+            var normalizedTitle = NormalizeTitle(Input.Title);
+            if (!string.IsNullOrWhiteSpace(normalizedTitle))
+            {
+                var exists = await _repo.ExistsByTitleAsync(uid, normalizedTitle, ct);
+                if (exists)
+                {
+                    TempData["swal_error"] = "Esta receta ya fue creada.";
+                    return Page(); // para mostrar el SweetAlert
+                }
+            }
 
             try
             {
-                var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                          ?? User.FindFirstValue("uid")
-                          ?? string.Empty;
-
                 var email = User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
                 var nombre = User.FindFirstValue(ClaimTypes.Name)
                              ?? User.FindFirstValue("nombre")
                              ?? string.Empty;
-
-                if (string.IsNullOrWhiteSpace(uid))
-                {
-                    ModelState.AddModelError(string.Empty, "No se pudo determinar el UID del usuario autenticado.");
-                    return Page();
-                }
 
                 // Inyectamos datos del autor
                 Input.AuthorUid = uid;
                 Input.AuthorEmail = string.IsNullOrWhiteSpace(email) ? null : email;
                 Input.AuthorName = string.IsNullOrWhiteSpace(nombre) ? null : nombre;
 
+                // ✅ Guardar normalizado (para futuras comparaciones)
+                Input.TitleNormalized = normalizedTitle;
+
                 string id;
 
                 if (esBorrador)
                 {
-                    // Guardar como borrador siempre (incluso si hay validaciones pendientes)
                     id = await _repo.CreateDraftAsync(Input, ct);
-
-                    // Si el modelo no es válido, queremos que el usuario vea las validaciones
-                    // pero igualmente guardamos el borrador. En ese caso, permanecemos en la página.
-                    if (!ModelState.IsValid)
-                    {
-                        TempData["ok"] = "Receta guardada como borrador. Atención: hay validaciones pendientes que deben revisarse antes de enviar a revisión.";
-                        return Page();
-                    }
-
-                    TempData["ok"] = "Receta guardada como borrador. Puedes editarla o enviarla a revisión cuando quieras.";
+                    TempData["ok"] = "Receta guardada como borrador.";
                 }
                 else
                 {
-                    // Enviar a revisión (flujo normal) — requiere modelo válido (ya chequeado arriba)
                     id = await _repo.CreateAsync(Input, ct);
-                    TempData["ok"] = "Receta enviada a revisión. Te avisaremos cuando se publique.";
+                    TempData["ok"] = "Receta enviada a revisión.";
                 }
 
-                return RedirectToPage("/Recipes/List");
+                return RedirectToPage("/Index");
             }
             catch (OperationCanceledException)
             {
@@ -118,9 +122,18 @@ namespace CamCook.Pages.Recipes
             catch (Exception ex)
             {
                 _log.LogError(ex, "Error creando receta");
-                ModelState.AddModelError(string.Empty, "Ocurri� un error al crear la receta. Intenta nuevamente.");
-                return Page();
+                ModelState.AddModelError(string.Empty, "Ocurrió un error al crear la receta. Intenta nuevamente.");
+                return Page(); // mejor Page() para ver el error, no redirigir
             }
+        }
+
+
+        private static string NormalizeTitle(string? t)
+        {
+            if (string.IsNullOrWhiteSpace(t)) return "";
+            t = t.Trim();
+            t = System.Text.RegularExpressions.Regex.Replace(t, @"\s+", " ");
+            return t.ToLowerInvariant();
         }
     }
 }

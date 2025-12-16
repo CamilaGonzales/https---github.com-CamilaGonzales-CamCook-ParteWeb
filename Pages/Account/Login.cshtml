@@ -13,7 +13,7 @@
                 <!-- Card principal -->
                 <div class="card shadow-lg border-0 rounded-4 login-card p-4 p-md-5 mb-3">
                     <div class="text-center mb-4">
-                        <img src="~/img/logo.png" alt="CamCook" width="72" class="mb-2" />
+                        <img src="~/img/logo3.png" alt="CamCook" width="72" class="mb-2" />
                         <h2 class="h4 mb-1 fw-bold">Bienvenido a CamCook</h2>
                         <p class="text-muted small mb-0">
                             Inicia sesión para guardar y descubrir recetas.
@@ -36,14 +36,19 @@
 
                             <div class="input-group input-group-lg">
                                 <input asp-for="Password"
+                                       id="Password"
+                                       type="password"
                                        class="form-control"
                                        autocomplete="current-password" />
 
                                 <button type="button"
                                         class="btn btn-outline-secondary"
-                                        id="togglePassword">
+                                        id="togglePassword"
+                                        aria-label="Mostrar u ocultar contraseña">
                                     <i class="bi bi-eye" id="togglePasswordIcon"></i>
                                 </button>
+
+
                             </div>
 
                             <span asp-validation-for="Password" class="text-danger small"></span>
@@ -122,15 +127,19 @@
             .catch(err => console.error(err));
     });
 
-    // Script para mostrar/ocultar contraseña con icono de Bootstrap
     document.getElementById('togglePassword').addEventListener('click', function () {
-        const input = document.getElementById('Password'); // id generado por asp-for="Password"
-        const icon = document.getElementById('togglePasswordIcon');
+      const input = document.getElementById('Password');
+      const icon = document.getElementById('togglePasswordIcon');
 
-        const isPassword = input.type === 'password';
-        input.type = isPassword ? 'text' : 'password';
+      const isHidden = input.type === 'password';
 
-        icon.classList.toggle('bi-eye', !isPassword);
-        icon.classList.toggle('bi-eye-slash', isPassword);
+      input.type = isHidden ? 'text' : 'password';
+
+      // Si estaba oculto y ahora se muestra => ojo tachado (slash)
+      icon.classList.toggle('bi-eye', !isHidden);
+      icon.classList.toggle('bi-eye-slash', isHidden);
     });
+</script>
+
+
 </script>

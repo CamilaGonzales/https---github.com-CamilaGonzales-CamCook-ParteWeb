@@ -209,7 +209,7 @@ label {
     overflow: hidden;
 }
 
-/* Columna izquierda con información */
+/* Columna izquierda con informaciï¿½n */
 .register-info {
     background: radial-gradient(120px 120px at 20% 10%, #f1a24a 20%, transparent 21%), radial-gradient(140px 140px at 90% 15%, #f1a24a 20%, transparent 21%), #FFF3DD;
     padding: 40px 32px;
@@ -245,12 +245,12 @@ label {
     }
 
     .register-info {
-        display: none; /* en móviles solo muestra el form */
+        display: none; /* en mï¿½viles solo muestra el form */
     }
 }
 /* ------------------ Tokens / base pro ------------------ */
 /* ================================
-   CAMCOOK — TOKENS / BASE
+   CAMCOOK ï¿½ TOKENS / BASE
 =================================*/
 :root {
     --brand: #f58f1e;
@@ -269,6 +269,82 @@ label {
     --shadow-lg: 0 24px 50px rgba(0,0,0,0.12);
 }
 
+/* === OVERRIDE: usar color de la imagen para botones azul/verde (solo diseÃ±o) === */
+:root {
+    --img-accent: #f5c243; /* color extraÃ­do de la imagen adjunta */
+    --img-accent-600: #e0ac33;
+    --img-accent-700: #c8932a;
+}
+
+/* Aplicar Ãºnicamente a botones 'primarios' (azul) y 'success' (verde) y CTA de bÃºsqueda */
+.btn-primary,
+.btn-success,
+.camcook-search-btn,
+.swal2-confirm {
+    background-color: var(--img-accent) !important;
+    border-color: var(--img-accent) !important;
+    color: #1b1b1b !important; /* texto oscuro para buen contraste */
+}
+
+.btn-primary:hover,
+.btn-success:hover,
+.camcook-search-btn:hover,
+.swal2-confirm:hover {
+    background-color: var(--img-accent-600) !important;
+    border-color: var(--img-accent-700) !important;
+    box-shadow: 0 10px 22px rgba(0,0,0,0.12);
+}
+
+.btn-primary:focus,
+.btn-success:focus,
+.camcook-search-btn:focus,
+.swal2-confirm:focus {
+    box-shadow: 0 0 0 0.25rem rgba(245,194,67,0.20) !important;
+}
+
+/* Mantener variantes outline/disabled sin cambios estructurales, solo asegurar contraste */
+.btn-primary:disabled,
+.btn-success:disabled,
+.btn-primary.disabled,
+.btn-success.disabled {
+    color: #fff !important;
+}
+
+/* Fin override de colores */
+
+/* === OVERRIDE ADICIONAL: enlaces y variantes outline (azul/verde) === */
+/* Hacemos que los botones outline y los "link buttons" usen el mismo acento de la imagen */
+.btn-link {
+    color: var(--img-accent) !important;
+    text-decoration: underline !important;
+}
+
+.btn-link:hover {
+    color: var(--img-accent-600) !important;
+}
+
+.btn-outline-primary,
+.btn-outline-success {
+    color: var(--img-accent) !important;
+    border-color: var(--img-accent) !important;
+    background-color: transparent !important;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-success:hover {
+    color: #1b1b1b !important;
+    background-color: var(--img-accent) !important;
+    border-color: var(--img-accent-700) !important;
+}
+
+/* Asegurar que botones pequeÃ±os tambiÃ©n hereden el tratamiento */
+.btn-sm.btn-outline-success,
+.btn-sm.btn-outline-primary {
+    padding: .35rem .6rem !important;
+}
+
+/* Fin override adicional */
+
 html, body {
     margin: 0;
     font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -277,7 +353,7 @@ html, body {
 }
 
 /* ================================
-   CONTENEDOR PÁGINA
+   CONTENEDOR Pï¿½GINA
 =================================*/
 .camcook-page {
     min-height: 100vh;
@@ -791,7 +867,7 @@ html, body {
             background: #f58f1e;
         }
 
-/* Icono corazón */
+/* Icono corazï¿½n */
 .camcook-icon-btn {
     width: 38px;
     height: 38px;
@@ -804,7 +880,7 @@ html, body {
     color: #f58f1e;
 }
 
-/* Botón redondo de marketplace */
+/* Botï¿½n redondo de marketplace */
 .camcook-market-btn {
     width: 54px;
     height: 54px;
@@ -907,7 +983,7 @@ html, body {
     border-radius: 18px;
     overflow: hidden;
     transition: transform 0.12s ease, box-shadow 0.12s ease;
-    cursor: pointer; /* para móvil/tablet */
+    cursor: pointer; /* para mï¿½vil/tablet */
     background: #ffffff;
 }
 
@@ -956,7 +1032,7 @@ html, body {
 }
 
 /* A partir de desktop (>=992px) mostramos botones dentro de la card
-   y ya no usamos tanto el “card clickeable” (pero se puede mantener). */
+   y ya no usamos tanto el ï¿½card clickeableï¿½ (pero se puede mantener). */
 @media (min-width: 992px) {
     .camcook-btn-desktop-only {
         display: inline-flex !important;
@@ -978,13 +1054,13 @@ html, body {
     min-height: 100vh;
 }
 
-/* Contenedor que envuelve TODO el contenido con círculos animados */
+/* Contenedor que envuelve TODO el contenido con cï¿½rculos animados */
 .camcook-page-bg {
     position: relative;
     overflow: hidden;
 }
 
-    /* Círculos animados de fondo (1) */
+    /* Cï¿½rculos animados de fondo (1) */
     .camcook-page-bg::before,
     .camcook-page-bg::after {
         content: "";
@@ -997,7 +1073,7 @@ html, body {
         mix-blend-mode: multiply;
     }
 
-    /* Círculo superior derecho */
+    /* Cï¿½rculo superior derecho */
     .camcook-page-bg::before {
         width: 260px;
         height: 260px;
@@ -1007,7 +1083,7 @@ html, body {
         animation: camcookFloat1 18s ease-in-out infinite alternate;
     }
 
-    /* Círculo inferior izquierdo */
+    /* Cï¿½rculo inferior izquierdo */
     .camcook-page-bg::after {
         width: 320px;
         height: 320px;
@@ -1058,7 +1134,7 @@ html, body {
     margin-bottom: 2rem;
 }
 
-/* Topbar CamCook (estética general) */
+/* Topbar CamCook (estï¿½tica general) */
 .camcook-topbar {
     background: linear-gradient(90deg, #FFE8B3, #FFD180);
 }
@@ -1116,7 +1192,7 @@ html, body {
         background-color: #FFF3E0;
     }
 
-/* Botón tienda en mostaza */
+/* Botï¿½n tienda en mostaza */
 .camcook-market-btn {
     background: linear-gradient(135deg, #FAA935, #F57C00);
     color: #FFFFFF;
@@ -1250,4 +1326,40 @@ html, body {
     flex-wrap: wrap;
     gap: 0.5rem;
     margin-top: auto; /* empuja al final del card */
+}
+.rp-link-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+    height: 42px;
+    padding: 0 16px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--color-acento), #F6C55C);
+    color: #1f1f1f;
+    box-shadow: 0 10px 22px rgba(233,169,58,.28);
+    transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+}
+
+    .rp-link-btn:hover {
+        box-shadow: 0 14px 28px rgba(233,169,58,.33);
+        opacity: .98;
+    }
+
+    .rp-link-btn:active {
+        transform: translateY(1px);
+    }
+
+.input-group .btn#togglePassword {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px; /* tamaï¿½o del botï¿½n */
+    padding: 0;
+}
+
+#togglePasswordIcon {
+    font-size: 1.2rem; /* tamaï¿½o del ojito */
 }

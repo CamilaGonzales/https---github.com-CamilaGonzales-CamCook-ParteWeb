@@ -84,7 +84,7 @@ namespace CamCook.Pages.Account
 
             await docRef.SetAsync(data);
 
-            TempData["ok"] = "? Registro exitoso. Ahora inicia sesión.";
+            TempData["ok"] = "Registro exitoso. Ahora inicia sesión.";
             return RedirectToPage("/Account/Login");
         }
     }

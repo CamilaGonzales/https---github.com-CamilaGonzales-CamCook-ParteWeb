@@ -25,7 +25,7 @@ namespace CamCook.Models
         public string? AuthorUid { get; set; }
         public string? AuthorEmail { get; set; }
         public string? AuthorName { get; set; }
-
+        public string? TitleNormalized { get; set; }
     }
 
     public class IngredientInput

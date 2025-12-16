@@ -150,7 +150,7 @@ namespace CamCook.Pages.Recipes
                     TempData["ok"] = "Cambios enviados a revisión. Te avisaremos cuando se publique.";
                 }
 
-                return RedirectToPage("/Recipes/List");
+                return RedirectToPage("/Index");
             }
             catch (OperationCanceledException)
             {

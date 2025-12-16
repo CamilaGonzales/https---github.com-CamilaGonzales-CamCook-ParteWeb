@@ -452,6 +452,15 @@ namespace CamCook.Services
             }, cancellationToken: ct);
         }
 
+        public async Task<bool> ExistsByTitleAsync(string authorUid, string titleNormalized, CancellationToken ct)
+        {
+            var snap = await _db.Collection("recetas")
+                .WhereEqualTo("AuthorUid", authorUid)
+                .WhereEqualTo("TitleNormalized", titleNormalized)
+                .Limit(1)
+                .GetSnapshotAsync(ct);
 
+            return snap.Count > 0;
+        }
     }
 }

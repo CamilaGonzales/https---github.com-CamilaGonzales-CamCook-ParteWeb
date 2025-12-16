@@ -1,6 +1,6 @@
-﻿namespace CamCook.Services
+﻿namespace CamCook.Services;
+
+public interface IEmailService
 {
-    public class IEmailService
-    {
-    }
+    Task SendAsync(string toEmail, string subject, string htmlBody);
 }

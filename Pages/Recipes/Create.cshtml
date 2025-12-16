@@ -449,5 +449,16 @@
                 }
             });
         }
+
+        @if (TempData["swal_error"] is string msg)
+         {
+           <script>
+            Swal.fire({
+               title: "Receta duplicada",
+               text: "@msg",
+               icon: "warning"
+            });
+           </script>
+        }
     });
 </script>
